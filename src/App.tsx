@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'r
 import { observer } from 'mobx-react';
 import Login from './auth/Login';
 import authStore from './stores/authStore';
-import './style.css';
+import './styles/index.css';
 
 // Placeholder Tasks component
 const Tasks = () => {
