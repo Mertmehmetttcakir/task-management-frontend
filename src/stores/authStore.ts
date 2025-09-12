@@ -1,63 +1,53 @@
-import { makeAutoObservable } from "mobx";
 import axios from "axios";
-
-export interface IUser {
-	id: number;
-	name: string;
-	email: string;
-	department: number;
-	jwtToken: string;
-}
+import { makeAutoObservable ,runInAction } from "mobx";
 
 class AuthStore {
-	user: IUser | null = null;
-	jwtToken: string | null = null;
-  isLoading = false;
-  error: string | null = null;
+    email: string = "";
+    password: string = "";
+    isLoggedIn: boolean = false;
+    error: string = "";
+    isLoading: boolean = false;
+    token: string = "";
 
-	constructor() {
-		makeAutoObservable(this);
-		// Uygulama açıldığında localStorage'dan token ve user bilgisini yükle
-		const token = localStorage.getItem("jwtToken");
-		if (token) {
-			this.jwtToken = token;
-		}
-		// User bilgisini localStorage'dan yüklemek isterseniz ekleyebilirsiniz
-	}
+    constructor() {
+        makeAutoObservable(this);
+    }
 
-	setUser(user: IUser) {
-		this.user = user;
-		this.jwtToken = user.jwtToken;
-		localStorage.setItem("jwtToken", user.jwtToken);
-		// User bilgisini localStorage'a kaydetmek isterseniz ekleyebilirsiniz
-	}
+    async loginAsync() {
+        this.isLoading = true;
+        this.error = "";
 
-	async login(email: string): Promise<boolean> {
-		this.isLoading = true;
-		this.error = null;
-		try {
-			const response = await axios.post("http://localhost:5000/api/auth/login", { email });
-			if (response.data?.code === "loginSuccess") {
-				const user = response.data.payload as IUser;
-				this.setUser(user);
-				return true;
-			}
-			this.error = "Giriş başarısız. Lütfen email adresinizi kontrol edin.";
-			return false;
-		} catch (err: any) {
-			this.error = err?.response?.data?.message || "Sunucu hatası";
-			return false;
-		} finally {
-			this.isLoading = false;
-		}
-	}
+        try {
+            const response = await axios.post("http://localhost:5000/api/auth/login", {
+                email: this.email,
+                password: this.password,
+            });
 
-	logout() {
-		this.user = null;
-		this.jwtToken = null;
-		localStorage.removeItem("jwtToken");
-	}
+            runInAction(() => {
+                this.token = response.data.token;
+                this.isLoggedIn = true;
+                this.error = "";
+            });
+        } catch (error: any) {
+            runInAction(() => {
+                this.error = error?.response?.data?.message ?? "Login failed";
+                this.isLoggedIn = false;
+                this.token = "";
+            });
+        } finally {
+            runInAction(() => {
+                this.isLoading = false;
+            });
+        }
+    }
+
+    logout() {
+        this.isLoggedIn = false;
+        this.token = "";
+        this.email = "";
+        this.password = "";
+        this.error = "";
+    }
 }
 
-const authStore = new AuthStore();
-export default authStore;
+export const authStore = new AuthStore();
