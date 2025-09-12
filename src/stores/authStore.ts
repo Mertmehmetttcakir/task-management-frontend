@@ -1,4 +1,5 @@
 import { makeAutoObservable } from "mobx";
+import axios from "axios";
 
 export interface IUser {
 	id: number;
@@ -11,6 +12,8 @@ export interface IUser {
 class AuthStore {
 	user: IUser | null = null;
 	jwtToken: string | null = null;
+  isLoading = false;
+  error: string | null = null;
 
 	constructor() {
 		makeAutoObservable(this);
@@ -27,6 +30,26 @@ class AuthStore {
 		this.jwtToken = user.jwtToken;
 		localStorage.setItem("jwtToken", user.jwtToken);
 		// User bilgisini localStorage'a kaydetmek isterseniz ekleyebilirsiniz
+	}
+
+	async login(email: string): Promise<boolean> {
+		this.isLoading = true;
+		this.error = null;
+		try {
+			const response = await axios.post("http://localhost:5000/api/auth/login", { email });
+			if (response.data?.code === "loginSuccess") {
+				const user = response.data.payload as IUser;
+				this.setUser(user);
+				return true;
+			}
+			this.error = "Giriş başarısız. Lütfen email adresinizi kontrol edin.";
+			return false;
+		} catch (err: any) {
+			this.error = err?.response?.data?.message || "Sunucu hatası";
+			return false;
+		} finally {
+			this.isLoading = false;
+		}
 	}
 
 	logout() {
