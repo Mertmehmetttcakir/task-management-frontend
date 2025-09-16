@@ -50,17 +50,15 @@ const LoginForm: React.FC = observer(() => {
                         />
                     </div>
 
-                    <label className="input-label">Şifre</label>
-                    <div className="input-field">
-                        <span className="input-icon">•</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <input
-                            type="password"
-                            placeholder="••••••••"
-                            value={authStore.password}
-                            onChange={(e) => (authStore.password = e.target.value)}
-                            required
+                            id="remember-me"
+                            type="checkbox"
+                            checked={authStore.rememberMe}
+                            onChange={(e) => (authStore.rememberMe = e.target.checked)}
                             disabled={authStore.isLoading}
                         />
+                        <label htmlFor="remember-me" className="input-label">Beni hatırla</label>
                     </div>
 
                     {authStore.error && (
@@ -73,8 +71,6 @@ const LoginForm: React.FC = observer(() => {
                 </form>
 
                 <div className="auth-footer">
-                    <span className="muted">Hesabınız yok mu?</span>
-                    <a className="link" href="#">Kayıt ol</a>
                 </div>
             </div>
         </div>
