@@ -7,16 +7,14 @@ import { ConditionDialog, ContentDialog, ErrorDialog, SuccessDialog } from "topr
 import { statusClass, statusLabel } from "./status";
 import { TaskTable } from "./components/TaskTable";
 import "../styles/index.css";
+import { Container, Stack, CircularProgress, Alert, Typography, TextField, Box } from "@mui/material";
+import { taskStore } from '../stores/taskStore';
 
 // moved statusLabel/statusClass to ./status
 
-type ViewMode = "all" | "mine" | "dept";
-
 const TaskList: React.FC = observer(() => {
-	const [tasks, setTasks] = useState<TaskDto[]>([]);
-	const [loading, setLoading] = useState(false);
-	const [error, setError] = useState<string>("");
-	const [view, setView] = useState<ViewMode>("all");
+	// Local UI state for dialogs & forms remains; tasks/view moved to taskStore
+	const { tasks, loading, error, view } = taskStore;
 	const [saving, setSaving] = useState(false);
 	const [editingTask, setEditingTask] = useState<TaskDto | null>(null);
 	const [editTitle, setEditTitle] = useState("");
@@ -26,35 +24,14 @@ const TaskList: React.FC = observer(() => {
 	const [detailTask, setDetailTask] = useState<TaskDto | null>(null);
 
 	const loadTasks = useCallback(async () => {
-		setLoading(true);
-		setError("");
-		try {
-			let data: TaskDto[] = [];
-			if (view === "mine") {
-				data = await TaskService.getMyTasks();
-			} else if (view === "dept") {
-				if (authStore.department == null) {
-					setError("Departman bilgisi bulunamadı.");
-					setTasks([]);
-					return;
-				}
-				data = await TaskService.getDepartmentTasks();
-			} else {
-				data = await TaskService.getAll();
-			}
-			setTasks(data);
-		} catch (e: any) {
-			setError(e?.response?.data?.message ?? "Görevler yüklenemedi.");
-		} finally {
-			setLoading(false);
-		}
-	}, [view]);
+		await taskStore.load();
+	}, []);
 
 	useEffect(() => {
 		if (authStore.isLoggedIn) {
 			loadTasks();
 		}
-	}, [authStore.isLoggedIn, loadTasks]);
+	}, [authStore.isLoggedIn, loadTasks, view]);
 
 	const openEditDialog = (t: TaskDto) => {
 		setEditingTask(t);
@@ -119,7 +96,11 @@ const TaskList: React.FC = observer(() => {
 	};
 
 	if (!authStore.isLoggedIn) {
-		return <div className="container">Lütfen giriş yapınız.</div>;
+			return (
+				<Container maxWidth="md" sx={{ py: 3 }}>
+					<Alert severity="info">Lütfen giriş yapınız.</Alert>
+				</Container>
+			);
 	}
 
 	const approveTask = async (t: TaskDto) => {
@@ -164,47 +145,42 @@ const TaskList: React.FC = observer(() => {
 		);
 	};
 
-	return (
-		<div className="container">
-			<div className="header-row">
-				<h2>
-					{view === "mine" ? "Görevlerim" : view === "dept" ? "Departmanımın Görevleri" : "Tüm Görevler"}
-				</h2>
-				<div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-					<div>
-						<button className={view === 'all' ? "btn btn-primary" : "btn"} onClick={() => setView('all')}>
-							Tümü
-						</button>
-						<button className={view === 'mine' ? "btn btn-primary" : "btn"} onClick={() => setView('mine')}>
-							Benim Görevlerim
-						</button>
-						<button className={view === 'dept' ? "btn btn-primary" : "btn"} onClick={() => setView('dept')} disabled={authStore.department == null}>
-							Departmanım
-						</button>
-					</div>
-					<button className="btn" onClick={openCreateDialog}>Yeni Görev</button>
-				</div>
-				<button className="btn btn-danger" onClick={() => authStore.logout()}>
-					Çıkış Yap
-				</button>
-			</div>
-			{loading && <div>Yükleniyor...</div>}
-			{error && <div className="auth-error">{error}</div>}
-			{(!loading && !error) && (
-				<div className="table-wrapper">
-					<TaskTable
-						tasks={tasks}
-						saving={saving}
-						currentUserId={authStore.userId}
-						currentDepartment={authStore.department}
-						onDetail={setDetailTask}
-						onEdit={openEditDialog}
-						onDelete={requestDelete}
-						onApprove={approveTask}
-						onReject={rejectTask}
-					/>
-				</div>
-			)}
+	  React.useEffect(() => {
+	    const handler = () => openCreateDialog();
+	    window.addEventListener('task:new', handler);
+	    return () => window.removeEventListener('task:new', handler);
+	  }, []);
+
+		return (
+				<Container maxWidth="lg" sx={{ py: 3 }}>
+					<Typography variant="h5" fontWeight={600} sx={{ mb: 2 }}>
+						{view === "mine" ? "Görevlerim" : view === "dept" ? "Departmanımın Görevleri" : "Tüm Görevler"}
+					</Typography>
+
+				{loading && (
+					<Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+						<CircularProgress size={20} />
+						<Typography>Yükleniyor...</Typography>
+					</Stack>
+				)}
+				{error && (
+					<Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
+				)}
+				{(!loading && !error) && (
+					<Box className="table-wrapper">
+						<TaskTable
+							tasks={tasks}
+							saving={saving}
+							currentUserId={authStore.userId}
+							currentDepartment={authStore.department}
+							onDetail={setDetailTask}
+							onEdit={openEditDialog}
+							onDelete={requestDelete}
+							onApprove={approveTask}
+							onReject={rejectTask}
+						/>
+					</Box>
+				)}
 
 			{/* Global dialogs via toprak-state + toprak-ui */}
 			<ConditionDialog
@@ -230,7 +206,7 @@ const TaskList: React.FC = observer(() => {
 				onConfirm={uiStore.onHideSuccessModal}
 			/>
 
-			<ContentDialog
+					<ContentDialog
 				open={uiStore.contentModal.open}
 				title={isCreating ? "Yeni Görev" : editingTask ? `Görevi Düzenle #${editingTask.id}` : "Görevi Düzenle"}
 				onCancel={uiStore.onHideContentModal}
@@ -238,43 +214,44 @@ const TaskList: React.FC = observer(() => {
 				submitDisabled={saving || !editTitle.trim() || (isCreating && (formAssignedDept === ""))}
 				maxWidth="sm"
 			>
-				<div className="auth-card" style={{ background: 'transparent', boxShadow: 'none', padding: 0 }}>
-					<div className="form-group">
-						<label htmlFor="edit-title">Başlık</label>
-						<input
-							id="edit-title"
-							type="text"
-							value={editTitle}
-							onChange={(e) => setEditTitle(e.target.value)}
-						/>
-					</div>
-					<div className="form-group" style={{ marginTop: 12 }}>
-						<label htmlFor="edit-description">Açıklama</label>
-						<textarea
-							id="edit-description"
-							value={editDescription}
-							onChange={(e) => setEditDescription(e.target.value)}
-							rows={4}
-							style={{ width: '100%', resize: 'vertical' }}
-						/>
-					</div>
-					{isCreating && (
-						<div className="form-group" style={{ marginTop: 12 }}>
-							<label htmlFor="assigned-dept">Atanacak Departman</label>
-							<input
-								id="assigned-dept"
-								type="number"
-								value={formAssignedDept}
-								onChange={(e) => setFormAssignedDept(e.target.value === "" ? "" : Number(e.target.value))}
-								min={0}
-							/>
-						</div>
-					)}
-				</div>
+						<Box sx={{ py: 1 }}>
+							<Stack spacing={2}>
+								<TextField
+									id="edit-title"
+									label="Başlık"
+									size="small"
+									fullWidth
+									value={editTitle}
+									onChange={(e) => setEditTitle(e.target.value)}
+								/>
+								<TextField
+									id="edit-description"
+									label="Açıklama"
+									size="small"
+									fullWidth
+									multiline
+									minRows={4}
+									value={editDescription}
+									onChange={(e) => setEditDescription(e.target.value)}
+								/>
+								{isCreating && (
+									<TextField
+										id="assigned-dept"
+										label="Atanacak Departman"
+										type="number"
+										size="small"
+										fullWidth
+										inputProps={{ min: 0 }}
+										value={formAssignedDept}
+										onChange={(e) => setFormAssignedDept(e.target.value === "" ? "" : Number(e.target.value))}
+									/>
+								)}
+							</Stack>
+						</Box>
 			</ContentDialog>
 
 			{/* Task detail dialog */}
-			<ContentDialog
+					<ContentDialog
 				open={!!detailTask}
 				title={detailTask ? `Görev Detayı #${detailTask.id}` : "Görev Detayı"}
 				onCancel={() => setDetailTask(null)}
@@ -282,18 +259,20 @@ const TaskList: React.FC = observer(() => {
 				hideSubmitButton
 				maxWidth="sm"
 			>
-				{detailTask && (
-					<div className="auth-card" style={{ background: 'transparent', boxShadow: 'none', padding: 0 }}>
-						<p><strong>Başlık:</strong> {detailTask.title}</p>
-						<p><strong>Açıklama:</strong> {detailTask.description}</p>
-						<p><strong>Durum:</strong> {statusLabel(detailTask.status)}</p>
-						<p><strong>Departman:</strong> {detailTask.assignedDepartment}</p>
-						<p><strong>Oluşturan:</strong> {detailTask.user?.name}</p>
-					</div>
-				)}
+						{detailTask && (
+							<Box sx={{ py: 1 }}>
+								<Stack spacing={1.5}>
+									<Typography><strong>Başlık:</strong> {detailTask.title}</Typography>
+									<Typography><strong>Açıklama:</strong> {detailTask.description}</Typography>
+									<Typography><strong>Durum:</strong> {statusLabel(detailTask.status)}</Typography>
+									<Typography><strong>Departman:</strong> {detailTask.assignedDepartment}</Typography>
+									<Typography><strong>Oluşturan:</strong> {detailTask.user?.name}</Typography>
+								</Stack>
+							</Box>
+						)}
 			</ContentDialog>
-		</div>
-	);
+				</Container>
+			);
 });
 
 export default TaskList;

@@ -17,7 +17,6 @@ class AuthStore {
     }
 
     email: string = "";
-   // password: string = "";
     isLoggedIn: boolean = false;
     error: string = "";
     isLoading: boolean = false;
@@ -125,7 +124,6 @@ class AuthStore {
         this.isLoggedIn = false;
         this.token = "";
         this.email = "";
-    //  this.password = "";
         this.error = "";
         this.userId = null;
         this.name = "";
