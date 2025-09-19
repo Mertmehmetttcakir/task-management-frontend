@@ -6,7 +6,12 @@ export interface TaskUserDto {
   name: string;
 }
 
-export type TaskStatus = 0 | 1 | 2; // guessing based on readme: 0 pending? readme shows 1 pending; backend examples sometimes show 0. We'll render labels defensively.
+
+export enum TaskStatus {
+  Pending = 0,
+  Approved = 1,
+  Rejected = 2,
+}
 
 export interface TaskDto {
   id: number;
