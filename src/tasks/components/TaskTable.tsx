@@ -1,6 +1,6 @@
 import React from "react";
 import { TaskDto } from "../../services/TaskService";
-import { statusClass, statusLabel } from "../status";
+import {  statusLabel, TaskStatus, departmentLabel,assignedDepartment } from "../status";
 import {
   Table,
   TableBody,
@@ -68,19 +68,21 @@ export const TaskTable: React.FC<TaskTableProps> = ({
                   </span>
                 </TableCell>
                 <TableCell>
-                  {/* Durum renklendirme: 0=pending->warning (sarı), 1=success (yeşil), 2=error (kırmızı) */}
                   <Chip
                     size="small"
                     label={statusLabel(t.status)}
                     color={
-                      t.status === 0 ? 'warning' :
-                      t.status === 1 ? 'success' :
-                      t.status === 2 ? 'error' : 'default'
+                      t.status === TaskStatus.Pending ? 'warning' :
+                      t.status === TaskStatus.Approved ? 'success' :
+                      t.status === TaskStatus.Rejected ? 'error' : 'default'
                     }
-                    variant={(t.status === 0 || t.status === 1 || t.status === 2) ? 'filled' : 'outlined'}
+                    variant={(t.status === TaskStatus.Pending || t.status === TaskStatus.Approved || t.status === TaskStatus.Rejected) ? 'filled' : 'outlined'}
                   />
                 </TableCell>
-                <TableCell>{t.assignedDepartment}</TableCell>
+                <TableCell>
+                  {/* departman hücresi */}
+                  {departmentLabel(t.assignedDepartment as assignedDepartment)}
+                </TableCell>
                 <TableCell>{t.user?.name}</TableCell>
                 <TableCell align="right">
                   <Stack direction="row" spacing={1} justifyContent="flex-end">
