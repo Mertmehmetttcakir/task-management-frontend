@@ -18,6 +18,7 @@ import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import MailOutlineIcon from '@mui/icons-material/MailOutline';
 import ApartmentIcon from '@mui/icons-material/Apartment';
 import BadgeIcon from '@mui/icons-material/Badge';
+import { assignedDepartment, departmentLabel } from '../tasks/status';
 
 const ProfilePage: React.FC = observer(() => {
   const initial = authStore.name?.charAt(0)?.toUpperCase();
@@ -57,10 +58,16 @@ const ProfilePage: React.FC = observer(() => {
                 <BadgeIcon />
               </ListItemIcon>
               <ListItemText
-                primary={authStore.userId ?? '—'}
-                secondary="Kullanıcı ID"
-                primaryTypographyProps={{ sx: { color: 'var(--text)' } }}
-                secondaryTypographyProps={{ sx: { color: 'var(--muted)' } }}
+                primary={
+                  <Typography sx={{ color: 'var(--text)' }}>
+                    {authStore.userId ?? '—'}
+                  </Typography>
+                }
+                secondary={
+                  <Typography variant="body2" sx={{ color: 'var(--muted)' }}>
+                    Kullanıcı ID
+                  </Typography>
+                }
               />
             </ListItem>
             <ListItem disableGutters>
@@ -68,22 +75,34 @@ const ProfilePage: React.FC = observer(() => {
                 <ApartmentIcon />
               </ListItemIcon>
               <ListItemText
-                primary={authStore.department ?? '—'}
-                secondary="Departman"
-                primaryTypographyProps={{ sx: { color: 'var(--text)' } }}
-                secondaryTypographyProps={{ sx: { color: 'var(--muted)' } }}
+                primary={
+                  <Typography sx={{ color: 'var(--text)' }}>
+                    {departmentLabel(authStore.department as assignedDepartment) ?? '—'}
+                  </Typography>
+                }
+                secondary={ 
+                  <Typography variant="body2" sx={{ color: 'var(--muted)' }}>
+                    Departman
+                  </Typography>
+                }
               />
-            </ListItem>
+            </ListItem> 
             <ListItem disableGutters>
               <ListItemIcon sx={{ minWidth: 36, color: 'var(--muted)' }}>
                 <MailOutlineIcon />
               </ListItemIcon>
               <ListItemText
-                primary={authStore.email || '—'}
-                secondary="E‑posta"
-                primaryTypographyProps={{ sx: { color: 'var(--text)' } }}
-                secondaryTypographyProps={{ sx: { color: 'var(--muted)' } }}
-              />
+                primary={
+                  <Typography sx={{ color: 'var(--text)' }}>
+                    {authStore.email || '—'}
+                  </Typography>
+                }
+                secondary={
+                  <Typography variant="body2" sx={{ color: 'var(--muted)' }}>
+                    E-posta
+                  </Typography>
+                }
+                />
             </ListItem>
           </List>
         </Stack>

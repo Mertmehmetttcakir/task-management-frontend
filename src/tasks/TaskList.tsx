@@ -7,8 +7,10 @@ import { ConditionDialog, ContentDialog, ErrorDialog, SuccessDialog } from "topr
 import { statusClass, statusLabel } from "./status";
 import { TaskTable } from "./components/TaskTable";
 import "../styles/index.css";
-import { Container, Stack, CircularProgress, Alert, Typography, TextField, Box } from "@mui/material";
+import { Container, Stack, CircularProgress, Alert, Typography, TextField, Box, MenuItem } from "@mui/material";
 import { taskStore } from '../stores/taskStore';
+import { assignedDepartment, departmentLabel } from "./status";
+import { useNavigate } from "react-router-dom";
 
 // moved statusLabel/statusClass to ./status
 
@@ -22,6 +24,7 @@ const TaskList: React.FC = observer(() => {
 	const [isCreating, setIsCreating] = useState(false);
 	const [formAssignedDept, setFormAssignedDept] = useState<number | "">("");
 	const [detailTask, setDetailTask] = useState<TaskDto | null>(null);
+	const navigate = useNavigate();
 
 	const loadTasks = useCallback(async () => {
 		await taskStore.load();
@@ -173,7 +176,7 @@ const TaskList: React.FC = observer(() => {
 							saving={saving}
 							currentUserId={authStore.userId}
 							currentDepartment={authStore.department}
-							onDetail={setDetailTask}
+							onDetail={(t) => navigate(`/tasks/${t.id}` )}
 							onEdit={openEditDialog}
 							onDelete={requestDelete}
 							onApprove={approveTask}
@@ -238,39 +241,34 @@ const TaskList: React.FC = observer(() => {
 									<TextField
 										id="assigned-dept"
 										label="Atanacak Departman"
-										type="number"
+										select
 										size="small"
 										fullWidth
-										inputProps={{ min: 0 }}
 										value={formAssignedDept}
-										onChange={(e) => setFormAssignedDept(e.target.value === "" ? "" : Number(e.target.value))}
-									/>
+										onChange={(e) =>
+											setFormAssignedDept(
+												e.target.value === "" ? "" : Number(e.target.value) as assignedDepartment
+											)
+										}
+									>
+										<MenuItem disabled value="">
+											Departman Seç
+										</MenuItem>
+										{Object.values(assignedDepartment)
+											.filter(v => typeof v === "number")
+											.map(v => (
+												<MenuItem key={v} value={v}>
+													{departmentLabel(v as assignedDepartment)}
+												</MenuItem>
+											))}
+									</TextField>
 								)}
 							</Stack>
 						</Box>
+						
 			</ContentDialog>
-
 			{/* Task detail dialog */}
-					<ContentDialog
-				open={!!detailTask}
-				title={detailTask ? `Görev Detayı #${detailTask.id}` : "Görev Detayı"}
-				onCancel={() => setDetailTask(null)}
-				onConfirm={() => setDetailTask(null)}
-				hideSubmitButton
-				maxWidth="sm"
-			>
-						{detailTask && (
-							<Box sx={{ py: 1 }}>
-								<Stack spacing={1.5}>
-									<Typography><strong>Başlık:</strong> {detailTask.title}</Typography>
-									<Typography><strong>Açıklama:</strong> {detailTask.description}</Typography>
-									<Typography><strong>Durum:</strong> {statusLabel(detailTask.status)}</Typography>
-									<Typography><strong>Departman:</strong> {detailTask.assignedDepartment}</Typography>
-									<Typography><strong>Oluşturan:</strong> {detailTask.user?.name}</Typography>
-								</Stack>
-							</Box>
-						)}
-			</ContentDialog>
+			
 				</Container>
 			);
 });

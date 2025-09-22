@@ -1,9 +1,13 @@
 import axios from "axios";
 import { ApiService } from "toprak-api";
+import { api } from "toprak-config";
 
 export interface TaskUserDto {
   id: number;
   name: string;
+  email: string;
+  department: number;
+  assignedDepartment: number;
 }
 
 
@@ -27,6 +31,11 @@ export interface ApiListResponse<T> {
   code: string;
   payload: T;
 }
+   async function getTask(id: number): Promise<TaskDto> {
+  return ApiService.call<TaskDto>(
+    axios.get<ApiListResponse<TaskDto>>(`http://localhost:5000/api/task/${id}`)
+  );
+}
 
 export const TaskService = {
   async getAll(): Promise<TaskDto[]> {
@@ -34,7 +43,7 @@ export const TaskService = {
       axios.get<ApiListResponse<TaskDto[]>>("http://localhost:5000/api/task")
     );
   },
-
+  getTask,
   async getMyTasks(): Promise<TaskDto[]> {
     return ApiService.call<TaskDto[]>(
       axios.get<ApiListResponse<TaskDto[]>>("http://localhost:5000/api/task/my-tasks")
@@ -72,6 +81,7 @@ export const TaskService = {
       );
     }
   },
+  
   async completeTask(id: number, status: 1 | 2): Promise<TaskDto> {
     // Use explicit endpoints; fall back to query-param style for compatibility
     if (status === 1) {
@@ -95,5 +105,10 @@ export const TaskService = {
         );
       }
     }
-  }
+  },
+  async AllUser(): Promise<TaskUserDto[]> {
+    return ApiService.call<TaskUserDto[]>(
+      axios.get<ApiListResponse<TaskUserDto[]>>(`http://localhost:5000/api/auth/all-users`)
+    );
+  },
 };
