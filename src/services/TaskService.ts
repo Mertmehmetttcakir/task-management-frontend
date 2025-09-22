@@ -13,6 +13,7 @@ export enum TaskStatus {
   Rejected = 2,
 }
 
+
 export interface TaskDto {
   id: number;
   title: string;

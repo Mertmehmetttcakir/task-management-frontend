@@ -23,7 +23,7 @@ const AppHeader: React.FC<AppHeaderProps> = observer(({ onToggleSidebar }) => {
     <AppBar position="static" color="transparent" elevation={0} sx={{ borderBottom: '1px solid rgba(148,163,184,.15)', backdropFilter: 'saturate(140%) blur(2px)' }}>
       <Toolbar>
         {onToggleSidebar && (
-          <IconButton edge="start" color="inherit" onClick={onToggleSidebar} sx={{ mr: 1, display: { md: 'none' } }} aria-label="menüyü aç">
+          <IconButton edge="start" color="inherit" onClick={onToggleSidebar} sx={{ mr: 1 }} aria-label="menüyü aç">
             <MenuIcon />
           </IconButton>
         )}
