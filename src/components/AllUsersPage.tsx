@@ -52,10 +52,10 @@ console.log("loading:", loading, "error:", error, "users:", users);
                   )}
             {!loading && !error && users.length > 0 && (
               <TableContainer>
-                <Table size='small'>
+                <Table size='small' sx={{ '& td, & th': { color: 'white' } }}>
                   <TableHead>
                     <TableRow>
-                      <TableCell style={{ width: 80 }}>ID</TableCell>
+                      <TableCell style={{ width: 80 }}  >ID</TableCell>
                       <TableCell>İsim</TableCell>
                       <TableCell>Mail</TableCell>
                       <TableCell>Departman</TableCell>
@@ -63,7 +63,7 @@ console.log("loading:", loading, "error:", error, "users:", users);
                       </TableRow>
                   </TableHead>
                   <TableBody>
-                    {users.map(user => (
+                    {users.map(user => (  
                       <TableRow key={user.id}>
                         <TableCell>{user.id}</TableCell>
                         <TableCell>{user.name}</TableCell>

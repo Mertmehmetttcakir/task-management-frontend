@@ -4,7 +4,6 @@ import { observer } from "mobx-react";
 import { authStore } from "../stores/authStore";
 import { uiStore } from "../stores/uiStore";
 import { ConditionDialog, ContentDialog, ErrorDialog, SuccessDialog } from "toprak-ui";
-import { statusClass, statusLabel } from "./status";
 import { TaskTable } from "./components/TaskTable";
 import "../styles/index.css";
 import { Container, Stack, CircularProgress, Alert, Typography, TextField, Box, MenuItem } from "@mui/material";
@@ -23,8 +22,16 @@ const TaskList: React.FC = observer(() => {
 	const [editDescription, setEditDescription] = useState("");
 	const [isCreating, setIsCreating] = useState(false);
 	const [formAssignedDept, setFormAssignedDept] = useState<number | "">("");
-	const [detailTask, setDetailTask] = useState<TaskDto | null>(null);
+	const [titleFilter, setTitleFilter] = useState('');
+	const [departmentFilter, setDepartmentFilter] = useState('');
 	const navigate = useNavigate();
+
+	const departmentOptions = Array.from(new Set(tasks.map(t => t.assignedDepartment)));
+
+	const filteredTasks = tasks.filter(task =>
+		task.title.toLowerCase().includes(titleFilter.toLowerCase()) &&
+		(departmentFilter ? task.assignedDepartment === Number(departmentFilter) : true)
+	);
 
 	const loadTasks = useCallback(async () => {
 		await taskStore.load();
@@ -170,9 +177,36 @@ const TaskList: React.FC = observer(() => {
 					<Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
 				)}
 				{(!loading && !error) && (
+					<>
+					<Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 2 }}>
+						<TextField
+							label="Başlık Ara"
+							size="small"
+							value={titleFilter}
+							onChange={(e) => setTitleFilter(e.target.value)}
+							sx={{ width: { xs: '100%', sm: '300px' } }}
+						/>
+						<TextField
+							label="Departman Filtrele"
+							size="small"
+							select
+							value={departmentFilter}
+							onChange={(e) => setDepartmentFilter(e.target.value)}
+							sx={{ width: { xs: '100%', sm: '200px' } }}
+						>
+							<MenuItem value="">
+								Tümü
+							</MenuItem>
+							{departmentOptions.map(dept => (
+								<MenuItem key={dept} value={dept}>
+									{departmentLabel(dept )}
+								</MenuItem>
+							))}
+						</TextField>
+					</Stack>
 					<Box className="table-wrapper">
 						<TaskTable
-							tasks={tasks}
+							tasks={filteredTasks}
 							saving={saving}
 							currentUserId={authStore.userId}
 							currentDepartment={authStore.department}
@@ -183,6 +217,7 @@ const TaskList: React.FC = observer(() => {
 							onReject={rejectTask}
 						/>
 					</Box>
+					</>
 				)}
 
 			{/* Global dialogs via toprak-state + toprak-ui */}
