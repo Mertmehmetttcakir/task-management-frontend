@@ -32,7 +32,7 @@ const TaskDetailPage: React.FC = () => {
   }, [task, taskId]);
 
   return (
-    <Box sx={{ p: { xs: 2, md: 3 }, maxWidth: 960 , mx: 'auto' }}>
+    <Box sx={{ p: { xs: 2, md: 3 }, maxWidth: 960 , mx: 'auto',  color: 'text.primary', backgroundColor: 'background.default' }}>
       <Button
         startIcon={<KeyboardBackspaceOutlinedIcon />}
         onClick={() => nav(-1)}
@@ -43,7 +43,7 @@ const TaskDetailPage: React.FC = () => {
       </Button>
 
       {loading && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 , backgroundColor: '' }}>
           <CircularProgress size={28} />
         </Box>
       )}

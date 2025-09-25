@@ -6,7 +6,7 @@ import { uiStore } from "../stores/uiStore";
 import { ConditionDialog, ContentDialog, ErrorDialog, SuccessDialog } from "toprak-ui";
 import { TaskTable } from "./components/TaskTable";
 import "../styles/index.css";
-import { Container, Stack, CircularProgress, Alert, Typography, TextField, Box, MenuItem } from "@mui/material";
+import { Container, Stack, CircularProgress, Alert, Typography, TextField, Box, MenuItem, Button } from "@mui/material";
 import { taskStore } from '../stores/taskStore';
 import { assignedDepartment, departmentLabel } from "./status";
 import { useNavigate } from "react-router-dom";
@@ -24,13 +24,14 @@ const TaskList: React.FC = observer(() => {
 	const [formAssignedDept, setFormAssignedDept] = useState<number | "">("");
 	const [titleFilter, setTitleFilter] = useState('');
 	const [departmentFilter, setDepartmentFilter] = useState('');
+	const [userFilter, setUserFilter] = useState('');
 	const navigate = useNavigate();
 
 	const departmentOptions = Array.from(new Set(tasks.map(t => t.assignedDepartment)));
 
 	const filteredTasks = tasks.filter(task =>
 		task.title.toLowerCase().includes(titleFilter.toLowerCase()) &&
-		(departmentFilter ? task.assignedDepartment === Number(departmentFilter) : true)
+		(departmentFilter !== '' ? task.assignedDepartment === Number(departmentFilter) : true)
 	);
 
 	const loadTasks = useCallback(async () => {
@@ -42,6 +43,12 @@ const TaskList: React.FC = observer(() => {
 			loadTasks();
 		}
 	}, [authStore.isLoggedIn, loadTasks, view]);
+
+	const handleResetFilters = () => {
+		setTitleFilter('');
+		setDepartmentFilter('');
+		setUserFilter('');
+	}
 
 	const openEditDialog = (t: TaskDto) => {
 		setEditingTask(t);
@@ -203,6 +210,11 @@ const TaskList: React.FC = observer(() => {
 								</MenuItem>
 							))}
 						</TextField>
+						<Button
+							variant="outlined"
+							onClick={handleResetFilters}
+							sx={{ minWidth: '150px',  color: 'black', borderColor: 'grey.700' }}
+						>Filtreleri Temizle</Button>					
 					</Stack>
 					<Box className="table-wrapper">
 						<TaskTable
@@ -293,7 +305,7 @@ const TaskList: React.FC = observer(() => {
 											.filter(v => typeof v === "number")
 											.map(v => (
 												<MenuItem key={v} value={v}>
-													{departmentLabel(v as assignedDepartment)}
+													{departmentLabel(v)}
 												</MenuItem>
 											))}
 									</TextField>

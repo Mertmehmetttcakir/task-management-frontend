@@ -37,7 +37,7 @@ export const TaskTable: React.FC<TaskTableProps> = ({
   onApprove,
   onReject,
 }) => {
-  if (tasks.length === 0) return <div style={{ padding: 12 }}>Görev bulunamadı.</div>;
+  if (tasks.length === 0) return <div style={{ padding: 12 }}>Pending durumunda görev bulunamadı.</div>;
   return (
     <TableContainer component={Paper}>
       <Table size="small">
