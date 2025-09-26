@@ -1,11 +1,14 @@
 import React, { useMemo, useState } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
-import { Card, CardContent, Typography, Stack, Box, Chip, Paper } from '@mui/material';
+import { Card, CardContent, Typography, Stack, Box, Chip, Paper, IconButton, Button } from '@mui/material';
 import { statusLabel, TaskStatus, departmentLabel, assignedDepartment } from '../status';
 import { TaskKanbanBoardProps } from './TaskKanbanBoardProps';
 import { TaskService } from '../../services/TaskService';
 import { taskStore } from '../../stores/taskStore';
 import { uiStore } from '../../stores/uiStore';
+import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
 
 
 const statusColumns : {id : string, status: TaskStatus, title: string, color: 'warning' | 'error' | 'success'}[] = [
@@ -14,8 +17,10 @@ const statusColumns : {id : string, status: TaskStatus, title: string, color: 'w
     {id: 'rejected', status: 2, title: 'Rejected', color: 'error'},
 ];  
 
-export const TaskKanbanBoard: React.FC<TaskKanbanBoardProps> = ({ tasks, saving, canChangeStatus, onDetail , onEdit, onDelete }) => {
+export const TaskKanbanBoard: React.FC<TaskKanbanBoardProps> = ({ tasks, saving, canChangeStatus, onDetail , onEdit, onDelete , maxPerColumn=8 }) => {
      const [ordered, setOrdered] = useState<Record<number, number>>({});
+  // Hangi kolonun tamamen açıldığını tutar (aksi halde kısıtlı gösterim)
+  const [expandedColumns, setExpandedColumns] = useState<Set<string>>(new Set());
      const grouped = useMemo(() => {
         const map: Record<TaskStatus , typeof tasks> = {
             [TaskStatus.Pending]: [],
@@ -82,80 +87,127 @@ export const TaskKanbanBoard: React.FC<TaskKanbanBoardProps> = ({ tasks, saving,
     };
     return (
         <DragDropContext onDragEnd={onDragEnd}>
-            <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="stretch">
-                {statusColumns.map(col => {
-                    const colTasks = grouped[col.status];
-                    return (
-                        <Box key={col.id} flex={1} minWidth={260}>
-                            <Paper variant="outlined" sx={{ p: 1.5, height: '100%', display: 'flex', flexDirection: 'column' }}>
-                                <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
-                                    <Typography variant="subtitle1" fontWeight={600}>{col.title}</Typography>
-                                    <Chip size="small" label={colTasks.length} color={col.color} />
-                                </Stack>
-                                <Droppable droppableId={col.id}>
-                                    {(provided, snapshot) => (
-                                        <Stack
-                                            ref={provided.innerRef}
-                                            spacing={1}
-                                            sx={{
-                                                flex: 1,
-                                                minHeight: 60,
-                                                p: 0.5,
-                                                borderRadius: 1,
-                                                transition: 'background-color .15s',
-                                                backgroundColor: snapshot.isDraggingOver ? 'action.hover' : 'transparent'
-                                            }}
-                                            {...provided.droppableProps}
-                                        >
-                                            {colTasks.map((t, index) => (
-                                                <Draggable draggableId={String(t.id)} index={index} key={t.id} isDragDisabled={saving}>
-                                                    {(dragProvided, dragSnapshot) => (
-                                                        <Card
-                                                            ref={dragProvided.innerRef}
-                                                            {...dragProvided.draggableProps}
-                                                            {...dragProvided.dragHandleProps}
-                                                            variant="outlined"
-                                                            sx={{
-                                                                cursor: dragSnapshot.isDragging ? 'grabbing' : 'grab',
-                                                                opacity: saving ? 0.6 : 1
-                                                            }}
-                                                            onClick={() => onDetail(t)
-    
-                                                                
-                                                            }
-                                                        >
-                                                            <CardContent sx={{ p: 1.5 }}>
-                                                              <Typography variant="subtitle2" fontWeight={600} gutterBottom noWrap>
-                                                                    #{t.id} {t.title}
-                                                                </Typography>
-                                                                {t.description && (
-                                                                    <Typography variant="caption" sx={{ display: 'block', mb: .5 }} noWrap>
-                                                                        {t.description}
-                                                                    </Typography>
-                                                                )}
-                                                                <Stack direction="row" spacing={1} flexWrap="wrap">
-                                                                    <Chip size="small" label={statusLabel(t.status)} color={col.color} />
-                                                                    <Chip size="small" variant="outlined" label={departmentLabel(t.assignedDepartment as assignedDepartment)} />
-                                                                </Stack>
-                                                            </CardContent>
-                                                        </Card>
-                                                    )}
-                                                </Draggable>
-                                            ))}
-                                            {provided.placeholder}
-                                            {colTasks.length === 0 && (
-                                                <Typography variant="caption" color="text.secondary" sx={{ px: .5 }}>
-                                                    Görev yok
-                                                </Typography>
-                                            )}
-                                        </Stack>
+      <Box className="kanban-board">
+        {statusColumns.map(col => {
+          const allColTasks = grouped[col.status];
+          const isExpanded = expandedColumns.has(col.id);
+          const visibleTasks = isExpanded ? allColTasks : allColTasks.slice(0, maxPerColumn);
+          const hiddenCount = allColTasks.length - visibleTasks.length;
+          return (
+            <Box key={col.id} flex="0 0 320px" className="kanban-column-wrapper">
+              <Paper variant="outlined" className="kanban-paper" sx={{ height: '100%', display:'flex', flexDirection:'column' }}>
+                <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+                  <Typography variant="subtitle2" fontWeight={600}>
+                    {col.title}
+                  </Typography>
+                  <Chip size="small" label={allColTasks.length} color={col.color} />
+                </Stack>
+                <Droppable droppableId={col.id}>
+                  {(provided, snapshot) => (
+                    <Stack
+                      ref={provided.innerRef}
+                      className="kanban-tasks"
+                      data-dropping={snapshot.isDraggingOver ? 'true' : 'false'}
+                      /* spacing removed; using pure CSS gap to avoid margin calc jumps */
+                      {...provided.droppableProps}
+                    >
+                      {visibleTasks.map((t, index) => (
+                        <Draggable
+                          key={t.id}
+                          draggableId={String(t.id)}
+                          index={index}
+                          isDragDisabled={saving}
+                        >
+                          {(dragProvided, dragSnapshot) => (
+                            <Card
+                              ref={dragProvided.innerRef}
+                              {...dragProvided.draggableProps}
+                              className="kanban-card"
+                              variant="outlined"
+                              sx={{
+                                opacity: saving ? 0.55 : 1,
+                                cursor: dragSnapshot.isDragging ? 'grabbing' : 'grab'
+                              }}
+                            >
+                              <CardContent sx={{ p: 1.2 }}>
+                                <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+                                  <Box
+                                    {...dragProvided.dragHandleProps}
+                                    sx={{ flex: 1, pr: 1 }}
+                                    onDoubleClick={() => onDetail?.(t)}
+                                  >
+                                    <Typography variant="subtitle2" fontWeight={600} gutterBottom noWrap>
+                                      #{t.id} {t.title}
+                                    </Typography>
+                                  </Box>
+                                  <Stack direction="row" spacing={0.5}>
+                                    {onDetail && (
+                                      <IconButton size="small" onClick={() => onDetail(t)}>
+                                        <VisibilityOutlinedIcon fontSize="small" />
+                                      </IconButton>
                                     )}
-                                </Droppable>
-                            </Paper>
-                        </Box>
-                    );
-                })}
-            </Stack>
+                                    {onEdit && (
+                                      <IconButton size="small" onClick={() => onEdit(t)}>
+                                        <EditOutlinedIcon fontSize="small" />
+                                      </IconButton>
+                                    )}
+                                    {onDelete && (
+                                      <IconButton size="small" onClick={() => onDelete(t)}>
+                                        <DeleteOutlineOutlinedIcon fontSize="small" />
+                                      </IconButton>
+                                    )}
+                                  </Stack>
+                                </Stack>
+                                <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mt: .5 }}>
+                                  <Chip size="small" label={statusLabel(t.status)} color={col.color} />
+                                  <Chip size="small" variant="outlined" label={departmentLabel(t.assignedDepartment as any)} />
+                                </Stack>
+                               
+                            
+                              </CardContent>
+                            </Card>
+                          )}
+                        </Draggable>
+                      ))}
+                      {provided.placeholder}
+                      {visibleTasks.length === 0 && (
+                        <Typography variant="caption" color="text.secondary">
+                          Görev yok
+                        </Typography>
+                      )}
+                      {hiddenCount > 0 && !isExpanded && (
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          onClick={() => {
+                            setExpandedColumns(prev => new Set(prev).add(col.id));
+                          }}
+                          sx={{ mt: .5, alignSelf: 'flex-start' }}
+                        >+{hiddenCount} daha göster</Button>
+                      )}
+                      {isExpanded && allColTasks.length > maxPerColumn && (
+                        <Button
+                          size="small"
+                          color="inherit"
+                          onClick={() => {
+                            setExpandedColumns(prev => {
+                              const n = new Set(prev);
+                              n.delete(col.id);
+                              return n;
+                            });
+                          }}
+                          sx={{ mt: .5, alignSelf: 'flex-start', opacity: .75 }}
+                        >Daralt</Button>
+                      )}
+                    </Stack>
+                  )}
+                </Droppable>
+              </Paper>
+            </Box>
+          );
+        })}
+      </Box>
         </DragDropContext>
     );
-};
+}
+    

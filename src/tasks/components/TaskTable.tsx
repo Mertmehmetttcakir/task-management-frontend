@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { TaskDto } from "../../services/TaskService";
 import {  statusLabel, TaskStatus, departmentLabel,assignedDepartment } from "../status";
 import {
@@ -12,6 +12,7 @@ import {
   Button,
   Chip,
   Stack,
+  TablePagination,
 } from "@mui/material";
 
 export interface TaskTableProps {
@@ -37,8 +38,25 @@ export const TaskTable: React.FC<TaskTableProps> = ({
   onApprove,
   onReject,
 }) => {
-  if (tasks.length === 0) return <div style={{ padding: 12 }}>Pending durumunda görev bulunamadı.</div>;
+
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(5);
+  const [kanbanLimit, setKanbanLimit] = useState(3);
+
+  const handleChangePage = (_: unknown, newPage: number) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
+
+  if (tasks.length === 0) return <div style={{ padding: 12 }}>Görev bulunamadı.</div>;
+
+  const pagedTasks = tasks.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
   return (
+    <Paper>
     <TableContainer component={Paper}>
       <Table size="small">
         <TableHead>
@@ -53,7 +71,7 @@ export const TaskTable: React.FC<TaskTableProps> = ({
           </TableRow>
         </TableHead>
         <TableBody>
-          {tasks.map((t) => {
+          {pagedTasks.map((t) => {
             const isOwner = currentUserId === t.user?.id;
             const canActOnDept = currentDepartment != null && currentDepartment === t.assignedDepartment;
             const isPending = t.status === 0;
@@ -109,5 +127,16 @@ export const TaskTable: React.FC<TaskTableProps> = ({
         </TableBody>
       </Table>
     </TableContainer>
+
+    <TablePagination sx={{ color: 'white' }}
+      component="div"
+      count={tasks.length}
+      page={page}
+      onPageChange={handleChangePage}
+      rowsPerPage={rowsPerPage}
+      onRowsPerPageChange={handleChangeRowsPerPage}
+      rowsPerPageOptions={[5, 10, 25]}
+    />
+  </Paper>
   );
 };

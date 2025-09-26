@@ -139,7 +139,7 @@ const TaskDetailContent: React.FC<Props> = ({ task }) => {
               >
                 Kullanıcı ID
               </Typography>
-              <Typography variant="body2" sx={{ fontWeight: 500 }}>
+              <Typography variant="body2" sx={{ fontWeight: 500 }}> 
                 {task.user?.id ?? "—"}
               </Typography>
             </Stack>

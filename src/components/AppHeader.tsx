@@ -20,7 +20,7 @@ const AppHeader: React.FC<AppHeaderProps> = observer(({ onToggleSidebar }) => {
     window.dispatchEvent(new CustomEvent('task:new'));
   };
   return (
-    <AppBar position="static" color="transparent" elevation={0} sx={{ borderBottom: '1px solid rgba(148,163,184,.15)', backdropFilter: 'saturate(140%) blur(2px)' }}>
+    <AppBar position="sticky" color="transparent" elevation={0} sx={{ top: 0, borderBottom: '1px solid rgba(148,163,184,.15)', backdropFilter: 'saturate(140%) blur(6px)', background: 'rgba(15,23,42,0.75)' }}>
       <Toolbar>
         {onToggleSidebar && (
           <IconButton edge="start" color="inherit" onClick={onToggleSidebar} sx={{ mr: 1 }} aria-label="menüyü aç">

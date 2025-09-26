@@ -172,8 +172,8 @@ const TaskList: React.FC = observer(() => {
 	  }, []);
 
 		return (
-				<Container maxWidth="lg" sx={{ py: 3 }}>
-      <Typography variant="h5" fontWeight={600} sx={{ mb: 2 }}>
+				<Container maxWidth="lg" sx={{ py: { xs: 2, md: 3 }, pb: 4, minHeight: 'calc(100vh - 140px)' }}>
+	<Typography variant="h5" fontWeight={600} sx={{ mb: 1.5 }}>
         {view === "mine" ? "Görevlerim" : view === "dept" ? "Departmanımın Görevleri" : "Tüm Görevler"}
       </Typography>
 
@@ -182,7 +182,7 @@ const TaskList: React.FC = observer(() => {
         spacing={2}
         justifyContent="space-between"
         alignItems={{ xs: "stretch", md: "center" }}
-        sx={{ mb: 2 }}
+	sx={{ mb: 1.5 }}
       >
         <Stack direction={{ xs: "column", sm: "row" }} spacing={2} flexGrow={1}>
           <TextField
@@ -265,7 +265,7 @@ const TaskList: React.FC = observer(() => {
 						/>
           </Box>
         ) : (
-          <Box sx={{ mt: 1 }}>
+          <Box sx={{ mt: 1, position: 'relative' }}>
             <TaskKanbanBoard
 							tasks ={filteredTasks}
 							saving={saving}
@@ -358,9 +358,9 @@ const TaskList: React.FC = observer(() => {
 						</Box>
 						
 			</ContentDialog>
-			{/* Task detail dialog */}
 			
 				</Container>
+				
 			);
 });
 export default TaskList;

@@ -9,4 +9,5 @@ export interface TaskKanbanBoardProps {
   onDetail(task: TaskDto): void;
   onEdit?(task: TaskDto): void;
   onDelete?(task: TaskDto): void;
+  maxPerColumn?: number;
 }
