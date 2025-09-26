@@ -10,7 +10,9 @@ import { Container, Stack, CircularProgress, Alert, Typography, TextField, Box, 
 import { taskStore } from '../stores/taskStore';
 import { assignedDepartment, departmentLabel } from "./status";
 import { useNavigate } from "react-router-dom";
-
+import { TaskKanbanBoard } from './components/TaskKanbanBoard';
+import ViewKanbanIcon from '@mui/icons-material/ViewKanban';
+import TableRowsIcon from '@mui/icons-material/TableRows';
 // moved statusLabel/statusClass to ./status
 
 const TaskList: React.FC = observer(() => {
@@ -26,6 +28,7 @@ const TaskList: React.FC = observer(() => {
 	const [departmentFilter, setDepartmentFilter] = useState('');
 	const [userFilter, setUserFilter] = useState('');
 	const navigate = useNavigate();
+	const [useKanban, setUseKanban] = useState(false);
 
 	const departmentOptions = Array.from(new Set(tasks.map(t => t.assignedDepartment)));
 
@@ -137,7 +140,7 @@ const TaskList: React.FC = observer(() => {
 			setSaving(false);
 		}
 	};
-
+  
 	const rejectTask = (t: TaskDto) => {
 		// Guard: only assigned department can reject pending tasks
 		if (t.status !== 0 || authStore.department == null || authStore.department !== t.assignedDepartment) {
@@ -170,23 +173,19 @@ const TaskList: React.FC = observer(() => {
 
 		return (
 				<Container maxWidth="lg" sx={{ py: 3 }}>
-					<Typography variant="h5" fontWeight={600} sx={{ mb: 2 }}>
-						{view === "mine" ? "Görevlerim" : view === "dept" ? "Departmanımın Görevleri" : "Tüm Görevler"}
-					</Typography>
+      <Typography variant="h5" fontWeight={600} sx={{ mb: 2 }}>
+        {view === "mine" ? "Görevlerim" : view === "dept" ? "Departmanımın Görevleri" : "Tüm Görevler"}
+      </Typography>
 
-				{loading && (
-					<Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
-						<CircularProgress size={20} />
-						<Typography>Yükleniyor...</Typography>
-					</Stack>
-				)}
-				{error && (
-					<Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
-				)}
-				{(!loading && !error) && (
-					<>
-					<Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 2 }}>
-						<TextField
+      <Stack
+        direction={{ xs: "column", md: "row" }}
+        spacing={2}
+        justifyContent="space-between"
+        alignItems={{ xs: "stretch", md: "center" }}
+        sx={{ mb: 2 }}
+      >
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={2} flexGrow={1}>
+          <TextField
 							label="Başlık Ara"
 							size="small"
 							value={titleFilter}
@@ -210,14 +209,50 @@ const TaskList: React.FC = observer(() => {
 								</MenuItem>
 							))}
 						</TextField>
-						<Button
-							variant="outlined"
-							onClick={handleResetFilters}
-							sx={{ minWidth: '150px',  color: 'black', borderColor: 'grey.700' }}
-						>Filtreleri Temizle</Button>					
+          <Button
+            onClick={handleResetFilters}
+            variant="outlined"
+            sx={{ minWidth: '150px',  color: 'black', borderColor: 'grey.700' }}
+          >
+            Filtreleri Temizle
+          </Button>
+        </Stack>
+        <Stack direction="row" spacing={1}>
+          <Button
+            size="small"
+            variant={useKanban ? "outlined" : "contained"}
+            startIcon={<TableRowsIcon />}
+            onClick={() => setUseKanban(false)}
+          >
+            Tablo
+          </Button>
+          <Button
+            size="small"
+            variant={useKanban ? "contained" : "outlined"}
+            startIcon={<ViewKanbanIcon />}
+            onClick={() => setUseKanban(true)}
+          >
+            Kanban
+          </Button>
+        </Stack>
+      </Stack>
+
+      {loading && (
+					
+					<Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+						<CircularProgress size={20} />
+						<Typography>Yükleniyor...</Typography>
 					</Stack>
-					<Box className="table-wrapper">
-						<TaskTable
+				)}
+				{error && (
+					<Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
+				)}
+
+      {!loading && !error && (
+        !useKanban ? (
+			
+          <Box className="table-wrapper">
+            <TaskTable
 							tasks={filteredTasks}
 							saving={saving}
 							currentUserId={authStore.userId}
@@ -228,9 +263,18 @@ const TaskList: React.FC = observer(() => {
 							onApprove={approveTask}
 							onReject={rejectTask}
 						/>
-					</Box>
-					</>
-				)}
+          </Box>
+        ) : (
+          <Box sx={{ mt: 1 }}>
+            <TaskKanbanBoard
+							tasks ={filteredTasks}
+							saving={saving}
+							canChangeStatus= {(t) => authStore.department != null && authStore.department === t.assignedDepartment && t.status === 0}
+							onDetail={(t) => navigate(`/tasks/${t.id}` )}
+						/>
+          </Box>
+        )
+      )}
 
 			{/* Global dialogs via toprak-state + toprak-ui */}
 			<ConditionDialog
@@ -319,5 +363,4 @@ const TaskList: React.FC = observer(() => {
 				</Container>
 			);
 });
-
 export default TaskList;

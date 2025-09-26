@@ -42,6 +42,7 @@
     "@fullcalendar/react": "^5.11.2",
     "@fullcalendar/timegrid": "^5.11.3",
     "@fullcalendar/timeline": "^5.11.3",
+    "@hello-pangea/dnd": "^18.0.1",
     "@mui/icons-material": "^6.0.0",
     "@mui/lab": "^6.0.0-beta.25",
     "@mui/material": "^6.0.0",
