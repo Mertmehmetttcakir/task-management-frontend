@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { TaskDto, TaskService } from "../services/TaskService";
+import { TaskDto } from "../services/TaskService";
 import { observer } from "mobx-react";
 import { authStore } from "../stores/authStore";
 import { uiStore } from "../stores/uiStore";
@@ -17,8 +17,7 @@ import TableRowsIcon from '@mui/icons-material/TableRows';
 
 const TaskList: React.FC = observer(() => {
 	// Local UI state for dialogs & forms remains; tasks/view moved to taskStore
-	const { tasks, loading, error, view } = taskStore;
-	const [saving, setSaving] = useState(false);
+	const { tasks, loading, error, view, mutating } = taskStore;
 	const [editingTask, setEditingTask] = useState<TaskDto | null>(null);
 	const [editTitle, setEditTitle] = useState("");
 	const [editDescription, setEditDescription] = useState("");
@@ -71,26 +70,39 @@ const TaskList: React.FC = observer(() => {
 	};
 
 	const handleConfirmEdit = async () => {
+		const isCreate = isCreating;
+		if (!editTitle.trim()) {
+			uiStore.onShowErrorModal("Başlık gerekli.");
+			return;
+		}
 		try {
-			setSaving(true);
-			if (isCreating) {
-				const assignedDepartment = typeof formAssignedDept === "string" ? parseInt(formAssignedDept) : formAssignedDept;
-				await TaskService.createTask({ title: editTitle, description: editDescription, assignedDepartment: assignedDepartment || 0 });
-				uiStore.onHideContentModal();
+			if (isCreate) {
+				const assignedDepartment =
+					typeof formAssignedDept === "string"
+						? parseInt(formAssignedDept)
+						: formAssignedDept || 0;
+				await taskStore.createTask({
+					title: editTitle.trim(),
+					description: editDescription.trim(),
+					assignedDepartment
+				});
 				uiStore.onShowSuccessModal("Görev oluşturuldu.");
 			} else {
 				if (!editingTask) return;
-				await TaskService.updateTask(editingTask.id, { title: editTitle, description: editDescription });
-				uiStore.onHideContentModal();
+				await taskStore.updateTask(editingTask.id, {
+					title: editTitle.trim(),
+					description: editDescription.trim()
+				});
 				uiStore.onShowSuccessModal("Görev güncellendi.");
 			}
-			await loadTasks();
-		} catch (e: any) {
-			uiStore.onShowErrorModal(e?.response?.data?.message ?? (isCreating ? "Oluşturma başarısız oldu." : "Güncelleme başarısız oldu."));
-		} finally {
-			setSaving(false);
+			uiStore.onHideContentModal();
 			setEditingTask(null);
 			setIsCreating(false);
+		} catch (e: any) {
+			uiStore.onShowErrorModal(
+				e?.response?.data?.message ||
+				(isCreate ? "Oluşturma başarısız." : "Güncelleme başarısız.")
+			);
 		}
 	};
 
@@ -99,65 +111,52 @@ const TaskList: React.FC = observer(() => {
 			`#${t.id} - ${t.title} görevini silmek istediğinize emin misiniz?`,
 			async () => {
 				try {
-					await TaskService.deleteTask(t.id);
+					await taskStore.remove(t.id);
 					uiStore.onHideConditionModal();
 					uiStore.onShowSuccessModal("Görev silindi.");
-					await loadTasks();
 				} catch (e: any) {
 					uiStore.onHideConditionModal();
-					uiStore.onShowErrorModal(e?.response?.data?.message ?? "Silme işlemi başarısız oldu.");
+					uiStore.onShowErrorModal(
+						e?.response?.data?.message || "Silme işlemi başarısız."
+					);
 				}
 			},
-			() => {
-				uiStore.onHideConditionModal();
-			}
+			() => uiStore.onHideConditionModal()
 		);
-
 	};
 
-	if (!authStore.isLoggedIn) {
-			return (
-				<Container maxWidth="md" sx={{ py: 3 }}>
-					<Alert severity="info">Lütfen giriş yapınız.</Alert>
-				</Container>
-			);
-	}
-
 	const approveTask = async (t: TaskDto) => {
-		// Guard: only assigned department can approve pending tasks
 		if (t.status !== 0 || authStore.department == null || authStore.department !== t.assignedDepartment) {
 			uiStore.onShowErrorModal("Bu görevi onaylamak için yetkiniz yok.");
 			return;
 		}
 		try {
-			setSaving(true);
-			await TaskService.completeTask(t.id, 1);
+			await taskStore.approve(t.id);
 			uiStore.onShowSuccessModal("Görev onaylandı.");
-			await loadTasks();
 		} catch (e: any) {
-			uiStore.onShowErrorModal(e?.response?.data?.message ?? "Onay işlemi başarısız oldu.");
-		} finally {
-			setSaving(false);
+			uiStore.onShowErrorModal(
+				e?.response?.data?.message || "Onay işlemi başarısız oldu."
+			);
 		}
 	};
-  
+
 	const rejectTask = (t: TaskDto) => {
-		// Guard: only assigned department can reject pending tasks
 		if (t.status !== 0 || authStore.department == null || authStore.department !== t.assignedDepartment) {
 			uiStore.onShowErrorModal("Bu görevi reddetmek için yetkiniz yok.");
-			return; 
+			return;
 		}
 		uiStore.onShowConditionModal(
 			`#${t.id} - ${t.title} görevini reddetmek istediğinize emin misiniz?`,
 			async () => {
 				try {
-					await TaskService.completeTask(t.id, 2);
+					await taskStore.reject(t.id);
 					uiStore.onHideConditionModal();
 					uiStore.onShowSuccessModal("Görev reddedildi.");
-					await loadTasks();
 				} catch (e: any) {
 					uiStore.onHideConditionModal();
-					uiStore.onShowErrorModal(e?.response?.data?.message ?? "Reddetme işlemi başarısız oldu.");
+					uiStore.onShowErrorModal(
+						e?.response?.data?.message || "Reddetme işlemi başarısız oldu."
+					);
 				}
 			},
 			() => uiStore.onHideConditionModal(),
@@ -205,7 +204,7 @@ const TaskList: React.FC = observer(() => {
 							</MenuItem>
 							{departmentOptions.map(dept => (
 								<MenuItem key={dept} value={dept}>
-									{departmentLabel(dept )}
+									{departmentLabel(dept as number)}
 								</MenuItem>
 							))}
 						</TextField>
@@ -254,10 +253,10 @@ const TaskList: React.FC = observer(() => {
           <Box className="table-wrapper">
             <TaskTable
 							tasks={filteredTasks}
-							saving={saving}
+							saving={mutating}
 							currentUserId={authStore.userId}
 							currentDepartment={authStore.department}
-							onDetail={(t) => navigate(`/tasks/${t.id}` )}
+							onDetail={(t) => navigate(`/tasks/detail/${t.id}` )}
 							onEdit={openEditDialog}
 							onDelete={requestDelete}
 							onApprove={approveTask}
@@ -268,9 +267,9 @@ const TaskList: React.FC = observer(() => {
           <Box sx={{ mt: 1, position: 'relative' }}>
             <TaskKanbanBoard
 							tasks ={filteredTasks}
-							saving={saving}
+							saving={mutating}
 							canChangeStatus= {(t) => authStore.department != null && authStore.department === t.assignedDepartment && t.status === 0}
-							onDetail={(t) => navigate(`/tasks/${t.id}` )}
+							onDetail={(t) => navigate(`/tasks/detail/${t.id}` )}
 						/>
           </Box>
         )
@@ -305,7 +304,11 @@ const TaskList: React.FC = observer(() => {
 				title={isCreating ? "Yeni Görev" : editingTask ? `Görevi Düzenle #${editingTask.id}` : "Görevi Düzenle"}
 				onCancel={uiStore.onHideContentModal}
 				onConfirm={handleConfirmEdit}
-				submitDisabled={saving || !editTitle.trim() || (isCreating && (formAssignedDept === ""))}
+				submitDisabled={
+					mutating ||
+					!editTitle.trim() ||
+					(isCreating && (formAssignedDept === ""))
+				}
 				maxWidth="sm"
 			>
 						<Box sx={{ py: 1 }}>

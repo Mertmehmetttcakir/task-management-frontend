@@ -10,20 +10,18 @@ export interface TaskUserDto {
   assignedDepartment: number;
 }
 
-
 export enum TaskStatus {
   Pending = 0,
   Approved = 1,
   Rejected = 2,
 }
 
-
 export interface TaskDto {
   id: number;
   title: string;
   description: string;
   status: TaskStatus;
-  assignedDepartment: number;
+  assignedDepartment: number | null | undefined;
   user: TaskUserDto;
 }
 
@@ -31,7 +29,8 @@ export interface ApiListResponse<T> {
   code: string;
   payload: T;
 }
-   async function getTask(id: number): Promise<TaskDto> {
+
+async function getTask(id: number): Promise<TaskDto> {
   return ApiService.call<TaskDto>(
     axios.get<ApiListResponse<TaskDto>>(`http://localhost:5000/api/task/${id}`)
   );
@@ -50,12 +49,12 @@ export const TaskService = {
     );
   },
 
-    async getDepartmentTasks(): Promise<TaskDto[]> {
-      // Backend derives user's department from JWT; returns tasks assigned to that department (pendings)
-      return ApiService.call<TaskDto[]>(
-        axios.get<ApiListResponse<TaskDto[]>>(`http://localhost:5000/api/task/pendings`)
-      );
-    },
+  async getDepartmentTasks(): Promise<TaskDto[]> {
+    // Backend derives user's department from JWT; returns tasks assigned to that department (pendings)
+    return ApiService.call<TaskDto[]>(
+      axios.get<ApiListResponse<TaskDto[]>>(`http://localhost:5000/api/task/pendings`)
+    );
+  },
 
   async updateTask(id: number, body: { title: string; description: string }): Promise<TaskDto> {
     return ApiService.call<TaskDto>(
@@ -81,7 +80,7 @@ export const TaskService = {
       );
     }
   },
-  
+
   async completeTask(id: number, status: 1 | 2): Promise<TaskDto> {
     // Use explicit endpoints; fall back to query-param style for compatibility
     if (status === 1) {
@@ -112,3 +111,9 @@ export const TaskService = {
     );
   },
 };
+
+export interface TaskUpdateRequest {
+  title: string;
+  description?: string;
+  assignedDepartment?: number; // null gerekiyorsa number | null
+}

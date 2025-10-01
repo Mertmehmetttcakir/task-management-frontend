@@ -9,6 +9,10 @@ import Layout from './components/Layout';
 import ProfilePage from './components/ProfilePage';
 import AllUsersPage from './components/AllUsersPage';
 import DetailPage from './components/DetailPage';
+import taskStore from './stores/taskStore';
+
+// init only once
+taskStore.init();
 
 const App: React.FC = observer(() => {
   if (!authStore.isLoggedIn) return <LoginForm />;
@@ -19,7 +23,7 @@ const App: React.FC = observer(() => {
           <Route path="/" element={<TaskList />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/users" element={<AllUsersPage />} />
-          <Route path="/tasks/:id" element={<DetailPage />} />
+          <Route path="/tasks/detail/:id" element={<DetailPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Layout>

@@ -8,47 +8,21 @@ export enum assignedDepartment {
   HR = 1,
   Finance = 2,
 }
-
-export const statusLabel = (s: TaskStatus): string => {
-  switch (s) {
-    case TaskStatus.Pending:
-      return "Pending";
-    case TaskStatus.Approved:
-      return "Approved";
-    case TaskStatus.Rejected:
-      return "Rejected";
-    default:
-      return `Unknown(${s})`;
-  }
+export const statusColorMap: Record<number, 'warning' | 'success' | 'error'> = {
+  0: 'warning',
+  1: 'success',
+  2: 'error'
 };
 
-export const statusClass = (s: TaskStatus) => {
-  switch (s) {
-    case TaskStatus.Pending:
-      return { pill: "status-pill pending", dot: "status-dot pending" };
-    case TaskStatus.Approved:
-      return { pill: "status-pill approved", dot: "status-dot approved" };
-    case TaskStatus.Rejected:
-      return { pill: "status-pill rejected", dot: "status-dot rejected" };
-    default:
-      return { pill: "status-pill unknown", dot: "status-dot unknown" };
-  }
-};
+export const statusLabel = (s: number) =>
+  s === 0 ? 'Pending' : s === 1 ? 'Approved' : 'Rejected';
+
+// Departman label 
+export const departmentLabel = (d?: number | null): string =>
+  d == null ? '—' : assignedDepartment[d] ;
+
 
 /* -------- Department Helpers (paralel yapı) -------- */
-
-export const departmentLabel = (d: assignedDepartment): string => {
-  switch (d) {
-    case assignedDepartment.Sales:
-      return "Sales";
-    case assignedDepartment.HR:
-      return "HR";
-    case assignedDepartment.Finance:
-      return "Finance";
-    default:
-      return `Unknown(${d})`;
-  }
-};
 
 export const departmentClass = (d: assignedDepartment) => {
   switch (d) {

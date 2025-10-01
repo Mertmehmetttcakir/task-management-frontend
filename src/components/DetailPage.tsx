@@ -1,17 +1,9 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
-  Box,
-  Stack,
-  Typography,
-  Chip,
-  Paper,
-  Divider,
-  IconButton,
-  Button,
-  Grid,
-  Skeleton,
-  Tooltip
+  Box, Stack, Typography, Chip, Paper, Divider, IconButton, Button,
+  Grid, Skeleton, Tooltip, Dialog, DialogTitle, DialogContent,
+  DialogActions, TextField 
 } from '@mui/material';
 import KeyboardBackspaceOutlinedIcon from '@mui/icons-material/KeyboardBackspaceOutlined';
 import RefreshIcon from '@mui/icons-material/Refresh';
@@ -19,87 +11,133 @@ import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import HighlightOffOutlinedIcon from '@mui/icons-material/HighlightOffOutlined';
-import { TaskService, TaskDto } from '../services/TaskService';
-import { assignedDepartment, departmentLabel } from '../tasks/status';
+import { departmentLabel } from '../tasks/status';
+import { observer } from 'mobx-react-lite';
+import taskStore from '../stores/taskStore';
+import {uiStore} from '../stores/uiStore';
+import UnstyledTabsCustomized from './UnstyledTabsCustomized';
+import { TabPanel } from '@mui/lab';
+
+
 const statusColorMap: Record<number, 'warning' | 'success' | 'error'> = {
   0: 'warning',
   1: 'success',
   2: 'error'
 };
-
 const statusLabel = (s: number) =>
   s === 0 ? 'Pending' : s === 1 ? 'Approved' : 'Rejected';
 
-
-
-const TaskDetailPage: React.FC = () => {
+const TaskDetailPage: React.FC = observer(() => {
   const { id } = useParams();
   const nav = useNavigate();
-  const { state } = useLocation() as { state?: { task?: TaskDto } };
   const taskId = Number(id);
-  const [task, setTask] = useState<TaskDto | null>(state?.task || null);
-  const [loading, setLoading] = useState(!state?.task);
-  const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
 
-  const load = useCallback(async () => {
-    if (!taskId) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const t = await TaskService.getTask(taskId);
-      setTask(t);
-    } catch (e: any) {
-      setError(e?.response?.data?.message || 'Görev yüklenemedi.');
-    } finally {
-      setLoading(false);
-    }
-  }, [taskId]);
+  // Store kaynaklı reactive state
+  const task = taskStore.getTask(taskId);
+  const { loading, error, mutating } = taskStore;
 
+  // Sadece UI (dialog) local state
+  const [editOpen, setEditOpen] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDesc, setEditDesc] = useState('');
+
+  // İlk yükleme / eksikse fetch
   useEffect(() => {
-    if (!task) load();
-  }, [task, load]);
+    if (!isNaN(taskId) && !task && !loading) {
+      taskStore.fetchTask(taskId);
+    }
+  }, [taskId, task, loading]);
 
-  const onApprove = async () => {
+  const refresh = () => {
+    if (!isNaN(taskId)) taskStore.fetchTask(taskId);
+  };
+
+  const handleEditOpen = () => {
     if (!task) return;
-    setSaving(true);
+    setEditTitle(task.title || '');
+    setEditDesc(task.description || '');
+    setEditOpen(true);
+  };
+  const handleEditClose = () => {
+    if (mutating) return;
+    setEditOpen(false);
+  };
+  const handleEditSave = async () => {
+    if (!task || !editTitle.trim()) return;
     try {
-      await TaskService.completeTask(task.id, 1);
-      await load();
+      await taskStore.updateTask(task.id, {
+        title: editTitle.trim(),
+        description: editDesc.trim()
+      });
+      uiStore.onShowSuccessModal?.('Görev güncellendi.');
+      setEditOpen(false);
     } catch (e: any) {
-      setError(e?.response?.data?.message || 'Onay başarısız.');
-    } finally {
-      setSaving(false);
+      uiStore.onShowErrorModal?.(
+        e?.response?.data?.message || 'Güncelleme başarısız.'
+      );
     }
   };
 
-  const onReject = async () => {
+  const handleApprove = async () => {
     if (!task) return;
-    setSaving(true);
     try {
-      await TaskService.completeTask(task.id, 2);
-      await load();
+      await taskStore.approve(task.id);
+      uiStore.onShowSuccessModal?.('Görev onaylandı.');
     } catch (e: any) {
-      setError(e?.response?.data?.message || 'Reddetme başarısız.');
-    } finally {
-      setSaving(false);
+      uiStore.onShowErrorModal?.(
+        e?.response?.data?.message || 'Onay başarısız.'
+      );
     }
   };
 
-  const handleEdit = () => {
+  const handleReject = async () => {
     if (!task) return;
-    // Yönlendirme tabanlı çözüm
-    nav(`/tasks/${task.id}/edit`, { state: { task } });
+    uiStore.onShowConditionModal?.(
+      `#${task.id} - ${task.title} reddedilsin mi?`,
+      async () => {
+        try {
+          await taskStore.reject(task.id);
+          uiStore.onHideConditionModal?.();
+          uiStore.onShowSuccessModal?.('Görev reddedildi.');
+        } catch (e: any) {
+          uiStore.onHideConditionModal?.();
+          uiStore.onShowErrorModal?.(
+            e?.response?.data?.message || 'Reddetme başarısız.'
+          );
+        }
+      },
+      () => uiStore.onHideConditionModal?.(),
+      'Reddet'
+    );
+  };
 
-    // Eğer modal kullanacaksan (örnek):
-    // uiStore.openTaskEdit(task);
+  const handleDelete = async () => {
+    if (!task) return;
+    uiStore.onShowConditionModal?.(
+      `#${task.id} - ${task.title} silinsin mi?`,
+      async () => {
+        try {
+          await taskStore.remove(task.id);
+          uiStore.onHideConditionModal?.();
+          uiStore.onShowSuccessModal?.('Görev silindi.');
+          nav(-1);
+        } catch (e: any) {
+          uiStore.onHideConditionModal?.();
+          uiStore.onShowErrorModal?.(
+            e?.response?.data?.message || 'Silme başarısız.'
+          );
+        }
+      },
+      () => uiStore.onHideConditionModal?.(),
+      'Sil'
+    );
   };
 
   const MetaItem: React.FC<{ label: string; value?: React.ReactNode }> = ({ label, value }) => (
     <Box>
-      <Typography variant="caption" sx={{ opacity: .6 }}>{label}</Typography>
+      <Typography variant="caption" sx={{ opacity: 0.6 }}>{label}</Typography>
       <Typography variant="body2" fontWeight={500} noWrap>
-        {value ?? <span style={{ opacity: .4 }}>—</span>}
+        {value ?? <span style={{ opacity: 0.4 }}>—</span>}
       </Typography>
     </Box>
   );
@@ -127,20 +165,28 @@ const TaskDetailPage: React.FC = () => {
           Geri
         </Button>
         <Typography variant="h5" fontWeight={600} sx={{ flex: 1 }}>
-          {loading ? 'Görev Detayı' : task ? `#${task.id} ${task.title}` : 'Görev'}
+          {loading && !task
+            ? 'Görev Detayı'
+            : task
+              ? `#${task.id} ${task.title}`
+              : 'Görev'}
         </Typography>
-        {loading && <Skeleton width={90} height={32} />}
-        {!loading && task && (
-          <Chip
-            size="small"
-            color={statusColorMap[task.status]}
-            label={statusLabel(task.status)}
-            sx={{ fontWeight: 600 }}
-          />
+        {loading && !task && <Skeleton width={90} height={32} />}
+        {task && (
+            <Chip
+              size="small"
+              color={statusColorMap[task.status]}
+              label={statusLabel(task.status)}
+              sx={{ fontWeight: 600 }}
+            />
         )}
         <Tooltip title="Yenile">
           <span>
-            <IconButton size="small" onClick={load} disabled={loading || saving}>
+            <IconButton
+              size="small"
+              onClick={refresh}
+              disabled={loading || mutating}
+            >
               <RefreshIcon fontSize="small" />
             </IconButton>
           </span>
@@ -149,9 +195,8 @@ const TaskDetailPage: React.FC = () => {
           <span>
             <IconButton
               size="small"
-              disabled={saving || loading || !task}
-              onClick={handleEdit}
-              
+              disabled={mutating || loading || !task}
+              onClick={handleEditOpen}
             >
               <EditOutlinedIcon fontSize="small" />
             </IconButton>
@@ -159,7 +204,12 @@ const TaskDetailPage: React.FC = () => {
         </Tooltip>
         <Tooltip title="Sil">
           <span>
-            <IconButton size="small" color="error" disabled={saving || loading || !task}>
+            <IconButton
+              size="small"
+              color="error"
+              disabled={mutating || loading || !task}
+              onClick={handleDelete}
+            >
               <DeleteOutlineOutlinedIcon fontSize="small" />
             </IconButton>
           </span>
@@ -181,18 +231,44 @@ const TaskDetailPage: React.FC = () => {
       )}
 
       {!loading && task && (
-        <>
-          {/* Meta Bilgiler */}
-            <Paper variant="outlined" sx={{ p: 2 }}>
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={3}><MetaItem label="ID" value={`#${task.id}`} /></Grid>
-                <Grid item xs={12} sm={3}><MetaItem label="Departman" value={departmentLabel(task.assignedDepartment)} /></Grid>
-                <Grid item xs={12} sm={3}><MetaItem label="Oluşturan" value={task.user.name} /></Grid>
-                <Grid item xs={12} sm={3}><MetaItem label="Durum" value={
-                  <Chip size="small" color={statusColorMap[task.status]} label={statusLabel(task.status)} />
-                } /></Grid>
+        <> 
+          <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+            <UnstyledTabsCustomized taskId={task.id}>
+          </UnstyledTabsCustomized> 
+          </Box>
+
+          {/* Meta Bilgiler
+          <Paper variant="outlined" sx={{ p: 2 }}>
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={3}>
+                <MetaItem label="ID" value={`#${task.id}`} />
               </Grid>
-            </Paper>
+              <Grid item xs={12} sm={3}>
+                <MetaItem
+                  label="Departman"
+                  value={departmentLabel(task.assignedDepartment || 0)}
+                /> 
+              </Grid>
+              <Grid item xs={12} sm={3}>
+                <MetaItem
+                  label="Oluşturan"
+                  value={task.user?.name}
+                />
+              </Grid>
+              <Grid item xs={12} sm={3}>
+                <MetaItem
+                  label="Durum"
+                  value={
+                    <Chip
+                      size="small"
+                      color={statusColorMap[task.status]}
+                      label={statusLabel(task.status)}
+                    />
+                  }
+                />
+              </Grid>
+            </Grid>
+          </Paper> */}
 
           {/* Açıklama */}
           <Paper variant="outlined" sx={{ p: 2 }}>
@@ -201,62 +277,115 @@ const TaskDetailPage: React.FC = () => {
                 Açıklama
               </Typography>
               <Divider />
-              {task.description
-                ? <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{task.description}</Typography>
-                : <Typography variant="body2" sx={{ opacity: .6, fontStyle: 'italic' }}>Açıklama yok</Typography>}
+              {task.description?.trim()
+                ? (
+                  <Typography
+                    variant="body2"
+                    sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.5 }}
+                  >
+                    {task.description}
+                  </Typography>
+                )
+                : (
+                  <Typography
+                    variant="body2"
+                    sx={{ opacity: 0.6, fontStyle: 'italic' }}
+                  >
+                    Açıklama yok
+                  </Typography>
+                )}
             </Stack>
           </Paper>
 
-          {/* İşlem Alanı */}
-          {task.status === 0 && (
-            <Paper variant="outlined" sx={{ p: 2 }}>
-              <Stack
-                direction={{ xs: 'column', sm: 'row' }}
-                spacing={1.5}
-                alignItems={{ xs: 'stretch', sm: 'center' }}
-              >
-                <Typography variant="subtitle2" sx={{ flex: 1 }}>
-                  Bu görevi onaylayabilir veya reddedebilirsiniz.
-                </Typography>
-                <Stack direction="row" spacing={1}>
-                  <Button
-                    size="small"
-                    variant="contained"
-                    color="success"
-                    startIcon={<CheckCircleOutlineIcon />}
-                    onClick={onApprove}
-                    disabled={saving}
-                  >
-                    Onayla
-                  </Button>
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    color="error"
-                    startIcon={<HighlightOffOutlinedIcon />}
-                    onClick={onReject}
-                    disabled={saving}
-                  >
-                    Reddet
-                  </Button>
+            {/* Onay / Reddet */}
+            {task.status === 0 && (
+              <Paper variant="outlined" sx={{ p: 2 }}>
+                <Stack
+                  direction={{ xs: 'column', sm: 'row' }}
+                  spacing={1.5}
+                  alignItems={{ xs: 'stretch', sm: 'center' }}
+                >
+                  <Typography variant="subtitle2" sx={{ flex: 1 }}>
+                    Bu görevi onaylayabilir veya reddedebilirsiniz.
+                  </Typography>
+                  <Stack direction="row" spacing={1}>
+                    <Button
+                      size="small"
+                      variant="contained"
+                      color="success"
+                      startIcon={<CheckCircleOutlineIcon />}
+                      onClick={handleApprove}
+                      disabled={mutating}
+                    >
+                      Onayla
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      color="error"
+                      startIcon={<HighlightOffOutlinedIcon />}
+                      onClick={handleReject}
+                      disabled={mutating}
+                    >
+                      Reddet
+                    </Button>
+                  </Stack>
                 </Stack>
-              </Stack>
-            </Paper>
-          )}
+              </Paper>
+            )}
 
-          {/* Placeholder - Log */}
-          <Paper variant="outlined" sx={{ p: 2 }}>
-            <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 1 }}>
-              Aktivite / Log (Yakında)
-            </Typography>
-            <Typography variant="body2" sx={{ opacity: .55 }}>
-              Durum değişiklikleri ve yorumlar burada listelenecek.
-            </Typography>
-          </Paper>
+          {/* Düzenleme Dialogu */}
+          <Dialog
+            open={editOpen}
+            onClose={mutating ? undefined : handleEditClose}
+            maxWidth="sm"
+            fullWidth
+          >
+            <DialogTitle>Görev Düzenle</DialogTitle>
+            <DialogContent dividers>
+              <Stack spacing={2} sx={{ mt: 1 }}>
+                <TextField
+                  label="Başlık"
+                  size="small"
+                  value={editTitle}
+                  onChange={e => setEditTitle(e.target.value)}
+                  required
+                  autoFocus
+                  disabled={mutating}
+                />
+                <TextField
+                  label="Açıklama"
+                  size="small"
+                  multiline
+                  minRows={3}
+                  value={editDesc}
+                  onChange={e => setEditDesc(e.target.value)}
+                  disabled={mutating}
+                />
+                {/* Departman seçimi gerekiyorsa burada ekleyebilirsin */}
+              </Stack>
+            </DialogContent>
+            <DialogActions>
+              <Button
+                variant="text"
+                onClick={handleEditClose}
+                disabled={mutating}
+              >
+                Vazgeç
+              </Button>
+              <Button
+                variant="contained"
+                onClick={handleEditSave}
+                disabled={mutating || !editTitle.trim()}
+              >
+                {mutating ? 'Kaydediliyor...' : 'Kaydet'}
+              </Button>
+            </DialogActions>
+          </Dialog>
         </>
       )}
     </Box>
   );
-};
+});
 
 export default TaskDetailPage;

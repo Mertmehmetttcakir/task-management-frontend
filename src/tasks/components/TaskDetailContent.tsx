@@ -9,7 +9,7 @@ import {
   Box,
   Grid,
   Divider,
-  Tooltip
+  Button
 } from "@mui/material";
 import PendingOutlinedIcon from "@mui/icons-material/HourglassEmpty";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
@@ -17,11 +17,14 @@ import CancelOutlinedIcon from "@mui/icons-material/CancelOutlined";
 import ApartmentOutlinedIcon from "@mui/icons-material/Apartment";
 import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
 import TagOutlinedIcon from "@mui/icons-material/TagOutlined";
-import { TaskDto, TaskStatus } from "../../services/TaskService";
-import { statusLabel, departmentLabel } from "../status";
-
-interface Props {
-  task: TaskDto;
+import { statusLabel, statusColorMap, departmentLabel } from '../status';
+import { observer } from 'mobx-react-lite';
+import taskStore from '../../stores/taskStore';
+import uiStore from '../../stores/uiStore';
+import { TaskStatus } from "../../services/TaskService";
+interface TaskDetailContentProps {
+  taskId: number;
+  onEdit?: () => void;
 }
 
 const statusConfig: Record<
@@ -42,7 +45,41 @@ const statusConfig: Record<
   }
 };
 
-const TaskDetailContent: React.FC<Props> = ({ task }) => {
+export const TaskDetailContent: React.FC<TaskDetailContentProps> = observer(({ taskId, onEdit }) => {
+  const task = taskStore.getTask(taskId);
+  const { mutating } = taskStore;
+
+  if (!task) {
+    return <Typography variant="body2" sx={{ opacity: .6 }}>Görev bulunamadı.</Typography>;
+  }
+
+  const approve = async () => {
+    try {
+      await taskStore.approve(task.id);
+      uiStore.onShowSuccessModal?.('Görev onaylandı.');
+    } catch (e: any) {
+      uiStore.onShowErrorModal?.(e?.response?.data?.message || 'Onay başarısız.');
+    }
+  };
+
+  const reject = () => {
+    uiStore.onShowConditionModal?.(
+      `#${task.id} - ${task.title} reddedilsin mi?`,
+      async () => {
+        try {
+          await taskStore.reject(task.id);
+          uiStore.onHideConditionModal?.();
+          uiStore.onShowSuccessModal?.('Görev reddedildi.');
+        } catch (e: any) {
+          uiStore.onHideConditionModal?.();
+          uiStore.onShowErrorModal?.(e?.response?.data?.message || 'Reddetme başarısız.');
+        }
+      },
+      () => uiStore.onHideConditionModal?.(),
+      'Reddet'
+    );
+  };
+
   const cfg = statusConfig[task.status];
 
   return (
@@ -111,7 +148,7 @@ const TaskDetailContent: React.FC<Props> = ({ task }) => {
                   size="small"
                   variant="outlined"
                   icon={<ApartmentOutlinedIcon sx={{ fontSize: 16 }} />}
-                  label={departmentLabel(task.assignedDepartment as any)}
+                  label={task.assignedDepartment}
                 />
               </Stack>
             </Grid>
@@ -176,11 +213,28 @@ const TaskDetailContent: React.FC<Props> = ({ task }) => {
           )}
         </Box>
 
- 
+        {task.status === 0 && (
+          <Stack direction="row" spacing={1}>
+            <Button
+              variant="contained"
+              size="small"
+              color="success"
+              disabled={mutating}
+              onClick={approve}
+            >Onayla</Button>
+            <Button
+              variant="outlined"
+              size="small"
+              color="error"
+              disabled={mutating}
+              onClick={reject}
+            >Reddet</Button>
+          </Stack>
+        )}
       </CardContent>
     </Card>
   );
-};
+});
 
 export default TaskDetailContent;
 
