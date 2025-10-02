@@ -39,15 +39,25 @@ class TaskStore {
 				throw new Error('createTask endpoint bulunamadı');
 			}
 			const created: TaskDto = await (TaskService as any).createTask(data);
-			this.upsert(created);
+ // Eğer dept görünümündeyiz ve görev farklı departmanda ise local eklemeyip yeniden yükle
+      if (this.view === 'dept' && this.currentDepartment != null && created.assignedDepartment !== this.currentDepartment) {
+// Sunucu listesini güncelle (filtreli)
+        await this.reloadCurrentView();
+        return created;
+      }  this.upsert(created);
+// mine veya dept görünümünde genel tutarlılık için yeniden yükle
+      if (this.view === 'mine' || this.view === 'dept') {
+        this.reloadCurrentView(); // await etmeden arka planda
+      }
 			return created;
+
 		} catch (e: any) {
 			this.setError(e?.response?.data?.message || e.message || 'Görev oluşturulamadı.');
 			throw e;
 		} finally {
 			this.setMutating(false);
 		}
-	};
+	};	
 	upsert = (t: TaskDto) => {
 		const i = this.tasks.findIndex(x => x.id === t.id);
 		if (i >= 0) {

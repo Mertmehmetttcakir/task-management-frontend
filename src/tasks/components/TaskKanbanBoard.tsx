@@ -27,7 +27,7 @@ export const TaskKanbanBoard: React.FC<TaskKanbanBoardProps> = observer(({
   onDetail,
   onEdit,
   onDelete,
-  maxPerColumn = 5
+  maxPerColumn = 4
 }) => {
   // Tek kaynak: dışarıdan tasks yoksa store.filteredTasks
   const source = tasks ?? taskStore.filteredTasks;

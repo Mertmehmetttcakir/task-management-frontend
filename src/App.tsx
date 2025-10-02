@@ -18,7 +18,6 @@ taskStore.init();
 const App: React.FC = observer(() => {
   if (!authStore.isLoggedIn) return <LoginForm />;
   return (
-    <BrowserRouter>
       <Layout>
         <Routes>
           <Route path="/dashboard" element={<Dashboard />} />
@@ -29,7 +28,6 @@ const App: React.FC = observer(() => {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Layout>
-    </BrowserRouter>
   );
 });
 

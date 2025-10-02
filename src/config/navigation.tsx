@@ -13,8 +13,9 @@ export interface NavItem {
 }
 
 export const primaryNav: NavItem[] = [
-  { label: 'Görevler', path: '/', icon: <AssignmentIcon fontSize="small" />, exact: true, showInHeader: true, showInSidebar: true },
+  { label: 'Dashboard', path: '/dashboard', icon: <AssignmentIcon fontSize="small" />, showInHeader: true, showInSidebar: true },
   { label: 'Profil', path: '/profile', icon: <PersonIcon fontSize="small" />, showInHeader: true, showInSidebar: true },
+  { label: 'Görevler', path: '/', icon: <AssignmentIcon fontSize="small" />, exact: true, showInHeader: true, showInSidebar: true },
   { label: 'Kullanıcılar', path: '/users', icon: <GroupIcon fontSize="small" />, showInHeader: false, showInSidebar: true },
 ];
 

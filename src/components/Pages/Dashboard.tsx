@@ -9,18 +9,21 @@ import {
   Button,
   Divider,
   Skeleton,
-  IconButton 
+  IconButton,
 } from '@mui/material';
-import RefreshIcon from '@mui/icons-material/Refresh';
-import AddIcon from '@mui/icons-material/Add';
 import ListAltIcon from '@mui/icons-material/ListAlt';
 import { observer } from 'mobx-react-lite';
 import { taskStore } from '../../stores/taskStore';
 import { statusLabel, statusColorMap } from '../../tasks/status';
 import { useNavigate } from 'react-router-dom';
+import { PieChart } from '@mui/x-charts';
+import { BarChart  } from '@mui/x-charts/BarChart';
+import BarChartIcon from '@mui/icons-material/BarChart';
+import PieChartOutlineIcon from '@mui/icons-material/PieChartOutline';
 
 const Dashboard: React.FC = observer(() => {
   const { tasks, loading, error } = taskStore;
+  const [usePieChart, setUsePieChart] = React.useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -29,17 +32,36 @@ const Dashboard: React.FC = observer(() => {
     }
   }, [tasks.length, loading]);
 
+
+
   const metrics = useMemo(() => {
     const counts = { total: tasks.length, pending: 0, approved: 0, rejected: 0 };
     tasks.forEach(t => {
+
       if (t.status === 0) counts.pending++;
-      else if (t.status === 1) counts.approved++;
+      else if (t.status === 1) counts.approved++; 
       else counts.rejected++;
     });
     return counts;
   }, [tasks]);
 
-  const recent = useMemo(
+  const depsmetric = useMemo(() => {
+    const dep = { Pending: 0, Approved: 0, Rejected: 0 };
+    const stat ={
+      HR: {...dep},
+      Sales: {...dep},
+      Finance: {...dep}
+    }
+    tasks.forEach(t => {
+      const depKey = t.status === 0 ? 'Pending' : t.status === 1 ? 'Approved' : 'Rejected';
+      if (t.assignedDepartment === 0) stat.Sales[depKey]++;
+      else if(t.assignedDepartment === 1) stat.HR[depKey]++;
+      else if (t.assignedDepartment === 2) stat.Finance[depKey]++;
+    });
+    return stat;
+  }, [tasks]);
+
+  const recent = useMemo( 
     () => [...tasks].sort((a, b) => b.id - a.id).slice(0, 5), /* Son 5 görevi al [...task] kopyasını alıyor */
     [tasks]
   );
@@ -49,15 +71,12 @@ const Dashboard: React.FC = observer(() => {
       <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={1}>
         <Typography variant="h5" fontWeight={600}>Dashboard</Typography>
         <Stack direction="row" spacing={1}>
-          <IconButton size="small" onClick={() => taskStore.load()} disabled={loading} sx={{ border: '1px solid var(--border)' }}> {/* Disabled olarak göstermemizin nedeni kullanıcıların yükleme sırasında butona tıklayamaması eğer tıklarsa çok fazla api istegi olacak. */}
-            <RefreshIcon fontSize="small" />
-          </IconButton>
           <Button size="small" startIcon={<ListAltIcon />} variant="outlined" onClick={() => navigate('/tasks')}>
             Görevler
           </Button>
-            <Button size="small" startIcon={<AddIcon />} variant="contained" onClick={() => navigate('/tasks?create=1')}>
+            {/* <Button size="small" startIcon={<AddIcon />} variant="contained" onClick={() => navigate('/tasks?create=1')}>
               Yeni Görev
-            </Button>
+            </Button> */}
         </Stack>
       </Stack>
 
@@ -125,19 +144,59 @@ const Dashboard: React.FC = observer(() => {
             </Stack>
           </Paper>
         </Grid>
-        
 
-        {/* <Grid item xs={12} md={5}>
+        <Grid item xs={12} md={5}>
           <Paper variant="outlined" sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 1, height: '100%' }}>
-            <Typography variant="subtitle1" fontWeight={600}>Durum Oranları</Typography>
-            <Divider />
-            <Stack spacing={1} sx={{ mt: 1 }}>
-              <RatioBar label="Bekleyen" count={metrics.pending} total={metrics.total} color="warning.main" />
-              <RatioBar label="Onaylanan" count={metrics.approved} total={metrics.total} color="success.main" />
-              <RatioBar label="Reddedilen" count={metrics.rejected} total={metrics.total} color="error.main" />
-            </Stack>
+            <Typography variant="subtitle1" fontWeight={600}>PieChart Grafiği</Typography>
+              <Divider />
+
+              <PieChart
+                series={[
+                  {
+                    data:[
+                      { id: 0, label: 'Bekleyen', value: metrics.pending,color: '#ff7e06ff'},
+                      { id: 1, label: 'Onaylanan', value: metrics.approved,color: '#1233c3f6'},
+                      { id: 2, label: 'Reddedilen', value: metrics.rejected,color: '#e60b0bfc'},
+                    ]
+                  } 
+                ] }
+                height={150}
+                width={400}
+              />
           </Paper>
-        </Grid> */}
+        </Grid>
+<Grid item xs={12} md={5}>
+  <Paper variant="outlined" sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 1, height: '100%' }}>
+          <BarChart
+      xAxis={[{ scaleType: 'band', data: ['HR','SALES','FINANCE']}]}
+      yAxis={[{ scaleType: 'linear',  tickMinStep: 1 /* 1'er 1'er artıyor */ }]}
+      series={[{ 
+        label: 'Pending',
+        data: [
+          depsmetric.HR.Pending,
+          depsmetric.Sales.Pending,
+          depsmetric.Finance.Pending
+        ],
+        color: '#ff7e06ff'
+      },{ label: 'Onaylanan',
+        data: [
+          depsmetric.HR.Approved,
+          depsmetric.Sales.Approved,
+          depsmetric.Finance.Approved
+        ],
+        color: '#1233c3f6'
+      },{ label: 'Reddedilen',
+        data: [
+          depsmetric.HR.Rejected,
+          depsmetric.Sales.Rejected,
+          depsmetric.Finance.Rejected
+        ],
+        color: '#e60b0bfc'
+      }]}
+      height={300}
+        />  
+        </Paper>
+        </Grid>
       </Grid>
     </Box>
   );
