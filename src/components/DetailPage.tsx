@@ -11,12 +11,14 @@ import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import HighlightOffOutlinedIcon from '@mui/icons-material/HighlightOffOutlined';
-import { departmentLabel } from '../tasks/status';
 import { observer } from 'mobx-react-lite';
 import taskStore from '../stores/taskStore';
 import {uiStore} from '../stores/uiStore';
 import UnstyledTabsCustomized from './UnstyledTabsCustomized';
-import { TabPanel } from '@mui/lab';
+import Accordion from "@mui/material/Accordion";
+import AccordionSummary from "@mui/material/AccordionSummary";
+import AccordionDetails from "@mui/material/AccordionDetails";
+import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
 
 
 const statusColorMap: Record<number, 'warning' | 'success' | 'error'> = {
@@ -114,13 +116,14 @@ const TaskDetailPage: React.FC = observer(() => {
   const handleDelete = async () => {
     if (!task) return;
     uiStore.onShowConditionModal?.(
+    
       `#${task.id} - ${task.title} silinsin mi?`,
       async () => {
         try {
           await taskStore.remove(task.id);
           uiStore.onHideConditionModal?.();
           uiStore.onShowSuccessModal?.('Görev silindi.');
-          nav(-1);
+          nav(`/tasks`);
         } catch (e: any) {
           uiStore.onHideConditionModal?.();
           uiStore.onShowErrorModal?.(
@@ -180,17 +183,6 @@ const TaskDetailPage: React.FC = observer(() => {
               sx={{ fontWeight: 600 }}
             />
         )}
-        <Tooltip title="Yenile">
-          <span>
-            <IconButton
-              size="small"
-              onClick={refresh}
-              disabled={loading || mutating}
-            >
-              <RefreshIcon fontSize="small" />
-            </IconButton>
-          </span>
-        </Tooltip>
         <Tooltip title="Düzenle">
           <span>
             <IconButton
@@ -198,6 +190,7 @@ const TaskDetailPage: React.FC = observer(() => {
               disabled={mutating || loading || !task}
               onClick={handleEditOpen}
             >
+              <Typography component="span" sx={{ mr: 1 }}>Düzenle</Typography>
               <EditOutlinedIcon fontSize="small" />
             </IconButton>
           </span>
@@ -210,6 +203,7 @@ const TaskDetailPage: React.FC = observer(() => {
               disabled={mutating || loading || !task}
               onClick={handleDelete}
             >
+              <Typography component="span" sx={{ mr: 1 }}>Sil</Typography>
               <DeleteOutlineOutlinedIcon fontSize="small" />
             </IconButton>
           </span>
@@ -273,27 +267,20 @@ const TaskDetailPage: React.FC = observer(() => {
           {/* Açıklama */}
           <Paper variant="outlined" sx={{ p: 2 }}>
             <Stack spacing={1}>
-              <Typography variant="subtitle1" fontWeight={600}>
-                Açıklama
-              </Typography>
-              <Divider />
-              {task.description?.trim()
-                ? (
-                  <Typography
-                    variant="body2"
-                    sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.5 }}
-                  >
-                    {task.description}
-                  </Typography>
-                )
-                : (
-                  <Typography
-                    variant="body2"
-                    sx={{ opacity: 0.6, fontStyle: 'italic' }}
-                  >
-                    Açıklama yok
-                  </Typography>
-                )}
+              <Accordion defaultExpanded>
+        <AccordionSummary
+          expandIcon={<ArrowDropDownIcon />}
+          aria-controls="desc-content"
+          id="desc-header"
+        >
+          <Typography component="span">Açıklama</Typography>
+        </AccordionSummary>
+        <AccordionDetails>
+          <Typography>
+            {task.description || "Açıklama bulunmamaktadır."}
+          </Typography>
+        </AccordionDetails>
+      </Accordion>
             </Stack>
           </Paper>
 

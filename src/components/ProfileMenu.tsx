@@ -33,6 +33,10 @@ const ProfileMenu: React.FC = observer(() => {
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
       >
+        {/* <MenuItem onClick={() => { handleClose(); navigate('/dashboard'); }}>
+          <ListItemIcon><AccountCircleIcon fontSize="small" /></ListItemIcon>
+          Dashboard
+        </MenuItem> */}
         <MenuItem onClick={() => { handleClose(); navigate('/profile'); }}>
           <ListItemIcon><AccountCircleIcon fontSize="small" /></ListItemIcon>
           Profilim

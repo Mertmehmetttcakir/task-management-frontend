@@ -10,6 +10,7 @@ import ProfilePage from './components/ProfilePage';
 import AllUsersPage from './components/AllUsersPage';
 import DetailPage from './components/DetailPage';
 import taskStore from './stores/taskStore';
+import Dashboard from './components/Pages/Dashboard';
 
 // init only once
 taskStore.init();
@@ -20,6 +21,7 @@ const App: React.FC = observer(() => {
     <BrowserRouter>
       <Layout>
         <Routes>
+          <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/" element={<TaskList />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/users" element={<AllUsersPage />} />

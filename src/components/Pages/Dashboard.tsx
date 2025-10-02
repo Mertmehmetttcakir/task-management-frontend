@@ -1,0 +1,171 @@
+import React, { useEffect, useMemo } from 'react';
+import {
+  Box,
+  Grid,
+  Paper,
+  Stack,
+  Typography,
+  Chip,
+  Button,
+  Divider,
+  Skeleton,
+  IconButton 
+} from '@mui/material';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import AddIcon from '@mui/icons-material/Add';
+import ListAltIcon from '@mui/icons-material/ListAlt';
+import { observer } from 'mobx-react-lite';
+import { taskStore } from '../../stores/taskStore';
+import { statusLabel, statusColorMap } from '../../tasks/status';
+import { useNavigate } from 'react-router-dom';
+
+const Dashboard: React.FC = observer(() => {
+  const { tasks, loading, error } = taskStore;
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!tasks.length && !loading) {
+      taskStore.load().catch(() => {});
+    }
+  }, [tasks.length, loading]);
+
+  const metrics = useMemo(() => {
+    const counts = { total: tasks.length, pending: 0, approved: 0, rejected: 0 };
+    tasks.forEach(t => {
+      if (t.status === 0) counts.pending++;
+      else if (t.status === 1) counts.approved++;
+      else counts.rejected++;
+    });
+    return counts;
+  }, [tasks]);
+
+  const recent = useMemo(
+    () => [...tasks].sort((a, b) => b.id - a.id).slice(0, 5), /* Son 5 görevi al [...task] kopyasını alıyor */
+    [tasks]
+  );
+
+  return (
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={1}>
+        <Typography variant="h5" fontWeight={600}>Dashboard</Typography>
+        <Stack direction="row" spacing={1}>
+          <IconButton size="small" onClick={() => taskStore.load()} disabled={loading} sx={{ border: '1px solid var(--border)' }}> {/* Disabled olarak göstermemizin nedeni kullanıcıların yükleme sırasında butona tıklayamaması eğer tıklarsa çok fazla api istegi olacak. */}
+            <RefreshIcon fontSize="small" />
+          </IconButton>
+          <Button size="small" startIcon={<ListAltIcon />} variant="outlined" onClick={() => navigate('/tasks')}>
+            Görevler
+          </Button>
+            <Button size="small" startIcon={<AddIcon />} variant="contained" onClick={() => navigate('/tasks?create=1')}>
+              Yeni Görev
+            </Button>
+        </Stack>
+      </Stack>
+
+      {error && (
+        <Paper variant="outlined" sx={{ p: 2, borderColor: 'error.main', background: 'rgba(244,67,54,0.05)' }}>
+          <Typography variant="body2" color="error">Görevler yüklenirken hata: {error}</Typography>
+        </Paper>
+      )}
+
+      <Grid container spacing={2}>
+        <Grid item xs={12} md={3}>
+          <MetricCard label="Toplam" value={metrics.total} color="default" loading={loading} />
+        </Grid>
+        <Grid item xs={12} md={3}>
+          <MetricCard label="Bekleyen" value={metrics.pending} color={statusColorMap[0]} loading={loading} />
+        </Grid>
+        <Grid item xs={12} md={3}>
+          <MetricCard label="Onaylanan" value={metrics.approved} color={statusColorMap[1]} loading={loading} />
+        </Grid>
+        <Grid item xs={12} md={3}>
+          <MetricCard label="Reddedilen" value={metrics.rejected} color={statusColorMap[2]} loading={loading} />
+        </Grid>
+
+        <Grid item xs={12} md={7}>
+          <Paper variant="outlined" sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 1, height: '100%' }}>
+            <Stack direction="row" alignItems="center" justifyContent="space-between">
+              <Typography variant="subtitle1" fontWeight={600}>Son Görevler</Typography>
+              <Button size="small" onClick={() => navigate('/tasks')} sx={{ textTransform: 'none' }}>
+                Hepsi
+              </Button>
+            </Stack>
+            <Divider />
+            <Stack spacing={1}>
+              {loading && !tasks.length && (
+                <>
+                  <Skeleton variant="rounded" height={40} />
+                  <Skeleton variant="rounded" height={40} />
+                  <Skeleton variant="rounded" height={40} />
+                </>
+              )}
+              {!loading && !recent.length && (
+                <Typography variant="body2" sx={{ opacity: 0.6, fontStyle: 'italic' }}>Kayıt yok</Typography>
+              )}
+              {recent.map(t => (
+                <Paper
+                  key={t.id}
+                  variant="outlined"
+                  sx={{
+                    p: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 1,
+                    cursor: 'pointer',
+                    '&:hover': { borderColor: 'primary.main' }
+                  }}
+                  onClick={() => navigate(`/tasks/detail/${t.id}`)}
+                >
+                  <Typography variant="body2" fontWeight={600} noWrap sx={{ maxWidth: 220 }}>
+                    #{t.id} {t.title}
+                  </Typography>
+                  <Chip size="small" color={statusColorMap[t.status]} label={statusLabel(t.status)} />
+                </Paper>
+              ))}
+            </Stack>
+          </Paper>
+        </Grid>
+        
+
+        {/* <Grid item xs={12} md={5}>
+          <Paper variant="outlined" sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 1, height: '100%' }}>
+            <Typography variant="subtitle1" fontWeight={600}>Durum Oranları</Typography>
+            <Divider />
+            <Stack spacing={1} sx={{ mt: 1 }}>
+              <RatioBar label="Bekleyen" count={metrics.pending} total={metrics.total} color="warning.main" />
+              <RatioBar label="Onaylanan" count={metrics.approved} total={metrics.total} color="success.main" />
+              <RatioBar label="Reddedilen" count={metrics.rejected} total={metrics.total} color="error.main" />
+            </Stack>
+          </Paper>
+        </Grid> */}
+      </Grid>
+    </Box>
+  );
+});
+
+interface MetricCardProps {
+  label: string;
+  value: number;
+  color: string;
+  loading: boolean;
+}
+const MetricCard: React.FC<MetricCardProps> = ({ label, value, color, loading }) => (
+  <Paper variant="outlined" sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 0.5, minHeight: 110 }}>
+    <Typography variant="caption" sx={{ fontWeight: 600, letterSpacing: .5, opacity: .75 }}>
+      {label.toUpperCase()}
+    </Typography>
+    {loading ? <Skeleton variant="text" width={60} height={42} /> : <Typography variant="h5" fontWeight={600}>{value}</Typography>}
+    <Box flexGrow={1} />
+    <Chip
+      size="small"
+      label={loading ? '...' : (value === 0 ? 'Yok' : `${value} adet`)}
+      color={(color === 'default' ? 'default' : (color as any))}
+      variant="outlined"
+      sx={{ alignSelf: 'flex-start' }}
+    />
+  </Paper>
+);
+
+
+
+export default Dashboard;

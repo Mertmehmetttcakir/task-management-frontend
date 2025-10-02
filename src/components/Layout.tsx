@@ -2,6 +2,9 @@ import React from 'react';
 import { Box } from '@mui/material';
 import AppHeader from './AppHeader';
 import AppSidebar from './AppSidebar';
+import { uiStore } from '../stores/uiStore';
+import {ConditionDialog, ErrorDialog , SuccessDialog} from 'toprak-ui';
+import { observer } from 'mobx-react';
 
 const SIDEBAR_WIDTH = 220;
 
@@ -34,8 +37,29 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           {children}
         </Box>
       </Box>
+           {/* Global Dialoglar */}
+      <ConditionDialog
+        open={uiStore.conditionModal.open}
+        title={uiStore.conditionModal.title || 'Emin misiniz?'}
+        message={uiStore.conditionModal.text}
+        submitButtonText={uiStore.conditionModal.submitButtonText}
+        onConfirm={uiStore.conditionModal.onConfirm || (() => {})}
+        onCancel={uiStore.conditionModal.onCancel || (() => {})}
+      />
+      <ErrorDialog
+        open={uiStore.errorModal.open}
+        title={uiStore.errorModal.title}
+        message={uiStore.errorModal.text}
+        onConfirm={uiStore.onHideErrorModal}
+      />
+      <SuccessDialog
+        open={uiStore.successModal.open}
+        title={uiStore.successModal.title}
+        message={uiStore.successModal.text}
+        onConfirm={uiStore.onHideSuccessModal}
+      />
     </Box>
   );
 };
 
-export default Layout;
+export default observer(Layout);

@@ -275,7 +275,7 @@ const TaskList: React.FC = observer(() => {
         )
       )}
 
-			{/* Global dialogs via toprak-state + toprak-ui */}
+			{/* Global dialogs via toprak-state + toprak-ui
 			<ConditionDialog
 				open={uiStore.conditionModal.open}
 				title={uiStore.conditionModal.title || "Emin misiniz?"}
@@ -297,7 +297,7 @@ const TaskList: React.FC = observer(() => {
 				title={uiStore.successModal.title}
 				message={uiStore.successModal.text}
 				onConfirm={uiStore.onHideSuccessModal}
-			/>
+			/> */}
 
 					<ContentDialog
 				open={uiStore.contentModal.open}
