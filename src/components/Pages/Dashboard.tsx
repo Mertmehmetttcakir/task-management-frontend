@@ -34,6 +34,7 @@ const Dashboard: React.FC = observer(() => {
 
 
 
+
   const metrics = useMemo(() => {
     const counts = { total: tasks.length, pending: 0, approved: 0, rejected: 0 };
     tasks.forEach(t => {
@@ -61,6 +62,13 @@ const Dashboard: React.FC = observer(() => {
     return stat;
   }, [tasks]);
 
+    const pieData = useMemo(() => [
+    {id: 0, label: 'Bekleyen', value: metrics.pending , color: '#ff7e06ff'},
+    {id: 1, label: 'Onaylanan', value: metrics.approved, color: '#1233c3f6'},
+    {id: 2, label: 'Reddedilen', value: metrics.rejected , color: '#e60b0bfc'},
+  ].filter(d => d.value > 0), [metrics]);
+    
+
   const recent = useMemo( 
     () => [...tasks].sort((a, b) => b.id - a.id).slice(0, 5), /* Son 5 görevi al [...task] kopyasını alıyor */
     [tasks]
@@ -85,7 +93,7 @@ const Dashboard: React.FC = observer(() => {
           <Typography variant="body2" color="error">Görevler yüklenirken hata: {error}</Typography>
         </Paper>
       )}
-
+      
       <Grid container spacing={2}>
         <Grid item xs={12} md={3}>
           <MetricCard label="Toplam" value={metrics.total} color="default" loading={loading} />
@@ -100,7 +108,7 @@ const Dashboard: React.FC = observer(() => {
           <MetricCard label="Reddedilen" value={metrics.rejected} color={statusColorMap[2]} loading={loading} />
         </Grid>
 
-        <Grid item xs={12} md={7}>
+        <Grid item xs={12} md={6}>
           <Paper variant="outlined" sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 1, height: '100%' }}>
             <Stack direction="row" alignItems="center" justifyContent="space-between">
               <Typography variant="subtitle1" fontWeight={600}>Son Görevler</Typography>
@@ -143,62 +151,76 @@ const Dashboard: React.FC = observer(() => {
               ))}
             </Stack>
           </Paper>
+        
         </Grid>
+        {/* <Grid container spacing={2} > */}
 
-        <Grid item xs={12} md={5}>
-          <Paper variant="outlined" sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 1, height: '100%' }}>
-            <Typography variant="subtitle1" fontWeight={600}>PieChart Grafiği</Typography>
+              <Grid item xs={12} md={6}>
+          <Paper variant = 'outlined' sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 1, height: '100%' }}>
+            <Stack direction="row" spacing={1} sx={{ alignSelf: 'flex-end' }}>
+              <Button size='small' variant={usePieChart ? 'outlined' : 'contained'} startIcon={<BarChartIcon />} onClick={() => setUsePieChart(false)}>
+                BarChart
+              </Button>
+              <Button size='small' variant={usePieChart ? 'contained' : 'outlined'} startIcon={<PieChartOutlineIcon />} onClick={() => setUsePieChart(true)}>
+                PieChart
+              </Button>
+            </Stack>
+            <Typography variant="subtitle1" fontWeight={600}> {usePieChart ? 'Durum Dağılımı' : 'Departman Bazında Dağılım'} </Typography>
               <Divider />
-
-              <PieChart
-                series={[
+              {usePieChart ? (
+                metrics.total === 0  || pieData.length === 0 ? (
+                  <Typography variant="body2" sx={{ opacity: 0.6, fontStyle: 'italic' }}>Kayıt yok</Typography>
+                ) : (
+                    <PieChart
+                  height={240}
+                  series={[{ innerRadius: 50, paddingAngle: 2, arcLabel: (item) => {
+                         const total = pieData.reduce((a,b)=>a + b.value, 0);
+                         return total ? `${(item.value/total*100).toFixed(0)}%` : '';
+                         }, arcLabelRadius: '65%', data: pieData }]}
+                  slotProps={{ legend: { direction: 'row', position: { vertical: 'middle', horizontal: 'right' } } }}
+                />
+              )
+            ) : (
+              <BarChart
+              height={300}
+              xAxis={[{ scaleType: 'band', data: ['HR','SALES','FINANCE']}]}
+              yAxis={[{ scaleType: 'linear',  tickMinStep: 1 /* 1'er 1'er artıyor */ }]}
+              series={[{
+                    label: 'Bekleyen',
+                    data: [
+                      depsmetric.HR.Pending,
+                      depsmetric.Sales.Pending,
+                      depsmetric.Finance.Pending
+                    ],
+                    color: '#ff7e06ff'
+                  },
                   {
-                    data:[
-                      { id: 0, label: 'Bekleyen', value: metrics.pending,color: '#ff7e06ff'},
-                      { id: 1, label: 'Onaylanan', value: metrics.approved,color: '#1233c3f6'},
-                      { id: 2, label: 'Reddedilen', value: metrics.rejected,color: '#e60b0bfc'},
-                    ]
-                  } 
-                ] }
-                height={150}
-                width={400}
+                    label: 'Onaylanan',
+                    data: [
+                      depsmetric.HR.Approved,
+                      depsmetric.Sales.Approved,
+                      depsmetric.Finance.Approved
+                    ],
+                    color: '#2e7d32'
+                  },
+                  {
+                    label: 'Reddedilen',
+                    data: [
+                      depsmetric.HR.Rejected,
+                      depsmetric.Sales.Rejected,
+                      depsmetric.Finance.Rejected
+                    ],
+                    color: '#d32f2f'
+                  }
+                ]}
               />
+            )}
           </Paper>
         </Grid>
-<Grid item xs={12} md={5}>
-  <Paper variant="outlined" sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 1, height: '100%' }}>
-          <BarChart
-      xAxis={[{ scaleType: 'band', data: ['HR','SALES','FINANCE']}]}
-      yAxis={[{ scaleType: 'linear',  tickMinStep: 1 /* 1'er 1'er artıyor */ }]}
-      series={[{ 
-        label: 'Pending',
-        data: [
-          depsmetric.HR.Pending,
-          depsmetric.Sales.Pending,
-          depsmetric.Finance.Pending
-        ],
-        color: '#ff7e06ff'
-      },{ label: 'Onaylanan',
-        data: [
-          depsmetric.HR.Approved,
-          depsmetric.Sales.Approved,
-          depsmetric.Finance.Approved
-        ],
-        color: '#1233c3f6'
-      },{ label: 'Reddedilen',
-        data: [
-          depsmetric.HR.Rejected,
-          depsmetric.Sales.Rejected,
-          depsmetric.Finance.Rejected
-        ],
-        color: '#e60b0bfc'
-      }]}
-      height={300}
-        />  
-        </Paper>
-        </Grid>
       </Grid>
+      {/* </Grid> */}
     </Box>
+    
   );
 });
 
