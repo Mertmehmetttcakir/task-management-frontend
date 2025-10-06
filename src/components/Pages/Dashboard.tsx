@@ -177,7 +177,7 @@ const Dashboard: React.FC = observer(() => {
                          const total = pieData.reduce((a,b)=>a + b.value, 0);
                          return total ? `${(item.value/total*100).toFixed(0)}%` : '';
                          }, arcLabelRadius: '65%', data: pieData }]}
-                  slotProps={{ legend: { direction: 'row', position: { vertical: 'middle', horizontal: 'right' } } }}
+                  slotProps={{ legend: { direction: 'row', position: { vertical: 'bottom', horizontal: 'right' } } }}
                 />
               )
             ) : (
