@@ -64,7 +64,7 @@ const Dashboard: React.FC = observer(() => {
 
     const pieData = useMemo(() => [
     {id: 0, label: 'Bekleyen', value: metrics.pending , color: '#ff7e06ff'},
-    {id: 1, label: 'Onaylanan', value: metrics.approved, color: '#1233c3f6'},
+    {id: 1, label: 'Onaylanan', value: metrics.approved, color: '#2e7d32'},
     {id: 2, label: 'Reddedilen', value: metrics.rejected , color: '#e60b0bfc'},
   ].filter(d => d.value > 0), [metrics]);
     
@@ -115,7 +115,7 @@ const Dashboard: React.FC = observer(() => {
               <Button size="small" onClick={() => navigate('/tasks')} sx={{ textTransform: 'none' }}>
                 Hepsi
               </Button>
-            </Stack>
+            </Stack>  
             <Divider />
             <Stack spacing={1}>
               {loading && !tasks.length && (
@@ -172,12 +172,13 @@ const Dashboard: React.FC = observer(() => {
                   <Typography variant="body2" sx={{ opacity: 0.6, fontStyle: 'italic' }}>Kayıt yok</Typography>
                 ) : (
                     <PieChart
-                  height={240}
-                  series={[{ innerRadius: 50, paddingAngle: 2, arcLabel: (item) => {
+                      height={240}
+                      margin={{ top: 8, right: 300, bottom: 8, left: 2 }} // sağa daha fazla margin → pasta sola kayar
+                      series={[{ innerRadius: 50, paddingAngle: 2, arcLabel: (item) => {
                          const total = pieData.reduce((a,b)=>a + b.value, 0);
                          return total ? `${(item.value/total*100).toFixed(0)}%` : '';
                          }, arcLabelRadius: '65%', data: pieData }]}
-                  slotProps={{ legend: { direction: 'row', position: { vertical: 'bottom', horizontal: 'right' } } }}
+                  slotProps={{ legend: { direction: 'row',  position: { vertical: 'top', horizontal: 'right' }  } }}
                 />
               )
             ) : (
